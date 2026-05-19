@@ -1,0 +1,324 @@
+import { useEffect, useState } from 'react';
+import {
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { clearApiKey, getApiKey, setApiKey } from '../src/services/storage';
+import { signOut, useAuth, useGoogleSignIn } from '../src/services/auth';
+import { CONFIG } from '../src/config';
+import { radius, spacing, useTheme } from '../src/ui/theme';
+
+export default function Settings() {
+  const theme = useTheme();
+  const auth = useAuth();
+  const [key, setKey] = useState('');
+  const [saved, setSaved] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    getApiKey().then((k) => {
+      setSaved(k);
+      if (k) setKey(k);
+    });
+  }, []);
+
+  const handleSaveKey = async () => {
+    const trimmed = key.trim();
+    if (!trimmed) return Alert.alert('Empty key', 'Please enter a value.');
+    await setApiKey(trimmed);
+    setSaved(trimmed);
+    setEditing(false);
+    Alert.alert('Saved', 'API key saved to secure storage.');
+  };
+
+  const handleClearKey = async () => {
+    await clearApiKey();
+    setKey('');
+    setSaved(null);
+    setEditing(false);
+  };
+
+  const googleConfigured =
+    !!CONFIG.GOOGLE.IOS_CLIENT_ID || !!CONFIG.GOOGLE.WEB_CLIENT_ID;
+
+  return (
+    <ScrollView
+      style={{ backgroundColor: theme.groupedBackground }}
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xl * 2 }}
+    >
+      <SectionHeader theme={theme}>ACCOUNT</SectionHeader>
+      <Group theme={theme}>
+        {auth.user ? (
+          <>
+            <Row theme={theme}>
+              <Text style={{ fontSize: 17, color: theme.label, flex: 1 }}>Signed in</Text>
+              <Text style={{ fontSize: 15, color: theme.secondaryLabel }} numberOfLines={1}>
+                {auth.user.email}
+              </Text>
+            </Row>
+            <Hairline theme={theme} />
+            <Pressable
+              onPress={async () => {
+                await signOut();
+              }}
+              style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
+            >
+              <Text style={{ color: theme.systemRed, fontSize: 17, flex: 1 }}>Sign out</Text>
+            </Pressable>
+          </>
+        ) : googleConfigured ? (
+          <GoogleSignInRow theme={theme} />
+        ) : (
+          <View style={[styles.row, { opacity: 0.5 }]}>
+            <Text style={{ fontSize: 22, marginRight: spacing.sm }}>🔐</Text>
+            <Text style={{ fontSize: 17, color: theme.label, flex: 1 }}>
+              Google sign-in not configured
+            </Text>
+          </View>
+        )}
+      </Group>
+      <Footnote theme={theme}>
+        {auth.user
+          ? 'Calendar event extraction uses the shared backend (50 requests/month). Add an OpenAI key below to use it instead.'
+          : googleConfigured
+          ? 'Sign in to use the shared backend — no API key needed (50 requests/month free).'
+          : 'Google sign-in needs an iOS / Web client ID. See README to configure.'}
+      </Footnote>
+
+      <SectionHeader theme={theme}>OPENAI API KEY</SectionHeader>
+      <Group theme={theme}>
+        {saved && !editing ? (
+          <>
+            <Row theme={theme}>
+              <Text style={{ fontSize: 17, color: theme.label, flex: 1 }}>Key</Text>
+              <Text style={{ fontSize: 15, color: theme.secondaryLabel }}>
+                sk-…{saved.slice(-4)}
+              </Text>
+            </Row>
+            <Hairline theme={theme} />
+            <Pressable
+              onPress={() => setEditing(true)}
+              style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
+            >
+              <Text style={{ color: theme.systemBlue, fontSize: 17, flex: 1 }}>Edit</Text>
+            </Pressable>
+            <Hairline theme={theme} />
+            <Pressable
+              onPress={handleClearKey}
+              style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
+            >
+              <Text style={{ color: theme.systemRed, fontSize: 17, flex: 1 }}>Remove key</Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <View style={{ padding: spacing.md, gap: spacing.sm }}>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    color: theme.label,
+                    backgroundColor: theme.groupedBackground,
+                    borderColor: theme.separator,
+                  },
+                ]}
+                placeholder="sk-..."
+                placeholderTextColor={theme.tertiaryLabel}
+                value={key}
+                onChangeText={setKey}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+              />
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <Pressable
+                  style={[styles.pillBtn, { backgroundColor: theme.systemBlue }]}
+                  onPress={handleSaveKey}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '600' }}>Save</Text>
+                </Pressable>
+                {saved && (
+                  <Pressable
+                    style={[styles.pillBtnOutline, { borderColor: theme.systemBlue }]}
+                    onPress={() => {
+                      setKey(saved);
+                      setEditing(false);
+                    }}
+                  >
+                    <Text style={{ color: theme.systemBlue, fontWeight: '600' }}>Cancel</Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          </>
+        )}
+      </Group>
+      <Footnote theme={theme}>
+        Stored in Keychain (iOS) / Keystore (Android). Sent directly to OpenAI; never
+        leaves the device otherwise. Required for image extraction.
+        {'  '}
+        <Text
+          onPress={() => Linking.openURL('https://platform.openai.com/api-keys')}
+          style={{ color: theme.systemBlue }}
+        >
+          Get a key →
+        </Text>
+      </Footnote>
+
+      <SectionHeader theme={theme}>ABOUT</SectionHeader>
+      <Group theme={theme}>
+        <Row theme={theme}>
+          <Text style={{ fontSize: 17, color: theme.label, flex: 1 }}>Version</Text>
+          <Text style={{ fontSize: 15, color: theme.secondaryLabel }}>{CONFIG.APP.VERSION}</Text>
+        </Row>
+        <Hairline theme={theme} />
+        <Pressable
+          onPress={() => Linking.openURL('https://openai.com/policies/usage-policies/')}
+          style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
+        >
+          <Text style={{ fontSize: 17, color: theme.label, flex: 1 }}>OpenAI usage policy</Text>
+          <Text style={{ color: theme.tertiaryLabel, fontSize: 17 }}>›</Text>
+        </Pressable>
+      </Group>
+    </ScrollView>
+  );
+}
+
+function GoogleSignInRow({ theme }: { theme: ReturnType<typeof useTheme> }) {
+  const google = useGoogleSignIn();
+  return (
+    <Pressable
+      disabled={!google.ready}
+      onPress={() => google.signIn()}
+      style={({ pressed }) => [
+        styles.row,
+        pressed && { backgroundColor: theme.fill },
+        !google.ready && { opacity: 0.5 },
+      ]}
+    >
+      <Text style={{ fontSize: 22, marginRight: spacing.sm }}>🔐</Text>
+      <Text style={{ fontSize: 17, color: theme.label, flex: 1 }}>Sign in with Google</Text>
+      <Text style={{ color: theme.tertiaryLabel, fontSize: 17 }}>›</Text>
+    </Pressable>
+  );
+}
+
+function SectionHeader({
+  children,
+  theme,
+}: {
+  children: React.ReactNode;
+  theme: ReturnType<typeof useTheme>;
+}) {
+  return (
+    <Text
+      style={{
+        color: theme.secondaryLabel,
+        fontSize: 13,
+        marginTop: spacing.xl,
+        marginBottom: spacing.xs,
+        marginLeft: spacing.md,
+        letterSpacing: 0.4,
+      }}
+    >
+      {children}
+    </Text>
+  );
+}
+
+function Group({
+  children,
+  theme,
+}: {
+  children: React.ReactNode;
+  theme: ReturnType<typeof useTheme>;
+}) {
+  return (
+    <View
+      style={{
+        backgroundColor: theme.card,
+        borderRadius: radius.md,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: theme.separator,
+        overflow: 'hidden',
+      }}
+    >
+      {children}
+    </View>
+  );
+}
+
+function Row({
+  children,
+  theme,
+}: {
+  children: React.ReactNode;
+  theme: ReturnType<typeof useTheme>;
+}) {
+  return <View style={styles.row}>{children}</View>;
+}
+
+function Hairline({ theme }: { theme: ReturnType<typeof useTheme> }) {
+  return (
+    <View
+      style={{
+        height: StyleSheet.hairlineWidth,
+        backgroundColor: theme.separator,
+        marginLeft: spacing.md,
+      }}
+    />
+  );
+}
+
+function Footnote({
+  children,
+  theme,
+}: {
+  children: React.ReactNode;
+  theme: ReturnType<typeof useTheme>;
+}) {
+  return (
+    <Text
+      style={{
+        color: theme.secondaryLabel,
+        fontSize: 13,
+        marginTop: spacing.sm,
+        marginHorizontal: spacing.md,
+        lineHeight: 18,
+      }}
+    >
+      {children}
+    </Text>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    minHeight: 44,
+  },
+  input: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    fontSize: 16,
+  },
+  pillBtn: { flex: 1, paddingVertical: 10, borderRadius: 20, alignItems: 'center' },
+  pillBtnOutline: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+});

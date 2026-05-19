@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "Add to Calendar",
+    "slug": "add-to-calendar-rn",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "addtocalendar",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.addtocalendar.rn",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to use the camera to capture event images.",
+        "NSPhotoLibraryUsageDescription": "Allow $(PRODUCT_NAME) to access photos to import event images.",
+        "NSCalendarsUsageDescription": "Allow $(PRODUCT_NAME) to add events to your calendar.",
+        "NSCalendarsFullAccessUsageDescription": "Allow $(PRODUCT_NAME) to add events to your calendar."
+      }
+    },
+    "android": {
+      "package": "com.addtocalendar.rn",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ]
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to extract calendar events from images.",
+          "cameraPermission": "The app accesses your camera to capture event images."
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "The app needs to access your calendar to add events."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
