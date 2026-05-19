@@ -1,5 +1,9 @@
 // Public configuration shared with the Chrome extension. Anon key is safe to
 // expose — it's the public Supabase client key. Edge Functions enforce auth.
+//
+// Forking? Replace SUPABASE_URL, SUPABASE_ANON_KEY, and EDGE_FUNCTIONS.PROCESS_TEXT
+// with values from your own Supabase project, and deploy the process-text
+// Edge Function there (see the sibling Chrome extension repo for source).
 
 export const CONFIG = {
   SUPABASE_URL: 'https://pahcnlwgtghsctbnedhx.supabase.co',

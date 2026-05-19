@@ -17,11 +17,11 @@ The first `npm run ios` runs `expo prebuild` to regenerate `ios/`. Re-run prebui
 
 ## Required environment
 
-Copy `.env.example` → `.env` and fill in three Google OAuth client IDs before `npm run ios`. Without them, Google sign-in is broken but BYOK still works. See `README.md` for the Google Cloud Console + Supabase audience setup — the iOS native sign-in returns a token whose `aud` is the **iOS** client ID, so Supabase's Google provider must list **both** the iOS and Web client IDs under "Authorized client IDs."
+Copy `.env.example` → `.env` and fill in at least `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` before `npm run ios`. Web and Android client IDs are only needed if you build those platforms. Without any IDs configured, the Settings screen gracefully degrades — Google sign-in shows "not configured" and BYOK (OpenAI key) still works (this is enforced by the `GoogleSignInRow` sub-component in `app/settings.tsx`, which only mounts when at least one client ID is present, since `expo-auth-session`'s Google hook throws otherwise). See `README.md` for the Google Cloud Console + Supabase setup — the iOS native flow returns a token whose `aud` is the **iOS** client ID, so Supabase's Google provider must list the iOS client ID under "Authorized client IDs" (alongside the existing Web one used by the Chrome extension).
 
 ## Architecture
 
-This is an iOS-first port of the sibling Chrome extension at `../add-to-calendar`. It shares the same Supabase project (`src/config.ts`) and the same `process-text` Edge Function — so backend changes must stay compatible with both clients.
+This is an iOS-first port of the sibling Chrome extension at `../add-to-calendar`. It shares the same Supabase project (`src/config.ts`) and the same `process-text` Edge Function — so backend changes must stay compatible with both clients. **Forks** should replace `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `EDGE_FUNCTIONS.PROCESS_TEXT` in `src/config.ts` with their own Supabase project's values.
 
 **Routing.** `expo-router` v4 with file-based routes in `app/`. `app/_layout.tsx` defines the stack (large titles, light/dark). Typed routes are enabled (`app.json` → `experiments.typedRoutes`).
 

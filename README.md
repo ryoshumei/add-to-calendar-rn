@@ -31,30 +31,43 @@ cd add-to-calendar-rn
 npm install
 ```
 
+### Forking? Point at your own Supabase project
+
+`src/config.ts` is hard-coded to the maintainer's Supabase project (shared
+with the sibling Chrome extension). To run this on your own backend, replace
+`SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `EDGE_FUNCTIONS.PROCESS_TEXT` with
+values from your Supabase project — and deploy the `process-text` Edge
+Function there (see the sibling Chrome extension repo for the source).
+
+If you're a maintainer working on the shared project, skip this and go
+straight to "Configure Google sign-in" below.
+
 ### Configure Google sign-in
 
-The Supabase project is shared with the Chrome extension, so you only need to
-add your Google OAuth client IDs. Create them in Google Cloud Console:
+For iOS-only builds you need **at minimum the iOS** Google OAuth client.
+Create it in Google Cloud Console, in the project connected to your Supabase
+Google provider:
 
-1. Go to <https://console.cloud.google.com/apis/credentials>, in the same
-   project that's connected to the shared Supabase auth provider.
-2. Create an **OAuth 2.0 Client ID** of type:
-   - **iOS** → bundle ID `com.addtocalendar.rn`
-   - **Web** → no redirect URI needed (Supabase verifies the audience)
-   - **Android** (optional) → package `com.addtocalendar.rn`, with your SHA-1
-3. Add the client IDs to an `.env` file at the project root:
+1. Go to <https://console.cloud.google.com/apis/credentials>.
+2. **+ Create credentials** → **OAuth client ID** → **iOS** → bundle ID
+   `com.addtocalendar.rn`. Copy the client ID.
+3. Copy `.env.example` → `.env` and paste it in:
 
 ```env
 EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=xxxxxxxxxxxx-xxxxxxxxxxxx.apps.googleusercontent.com
-EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=xxxxxxxxxxxx-xxxxxxxxxxxx.apps.googleusercontent.com
-EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=xxxxxxxxxxxx-xxxxxxxxxxxx.apps.googleusercontent.com
 ```
 
-4. In Supabase dashboard → Authentication → Providers → Google, make sure the
-   **Web** client ID is listed in *"Authorized client IDs"*. The iOS native
-   flow returns an ID token whose `aud` is the iOS client ID, so add that
-   here too. (Supabase recently added support for multiple audiences per
-   provider — paste both IDs separated by commas.)
+*Optional, only if you also build for those platforms:*
+- **Web** client (no redirect URI needed) → `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
+- **Android** client (package `com.addtocalendar.rn` + SHA-1) → `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`
+
+4. In Supabase Dashboard → Authentication → Providers → Google → *"Authorized
+   Client IDs"*, add your **iOS** client ID (comma-separate alongside any
+   existing Web client ID). The iOS native flow returns an ID token whose
+   `aud` is the iOS client ID, so Supabase needs to trust it.
+
+Without `.env` configured, the Settings screen shows "Google sign-in not
+configured" and BYOK (OpenAI key) still works fine.
 
 ### Run
 
