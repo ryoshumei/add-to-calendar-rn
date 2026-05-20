@@ -9,6 +9,7 @@
 // accepts text. (A future /process-image function can mirror this client.)
 
 import * as FileSystem from 'expo-file-system';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { CONFIG } from '../config';
 
 export type CalendarEvent = {
@@ -101,6 +102,61 @@ export async function extractEventsFromTextViaBackend(
   const data = await res.json();
   // Backend may return { eventDetails: { events: [...] }, usage } or
   // { events: [...], usage }. Accept both.
+  const events: CalendarEvent[] =
+    data?.eventDetails?.events ??
+    data?.events ??
+    (data?.eventDetails ? [data.eventDetails] : []);
+  return { events, usage: data?.usage };
+}
+
+// ─── Backend image extraction (resize → base64 → process-image) ───────────
+
+/**
+ * Resize an image to a max edge of 1600px and JPEG-compress it, to keep the
+ * upload payload (and OpenAI token cost) small. Returns a new local file URI.
+ */
+async function resizeForUpload(uri: string): Promise<string> {
+  const context = ImageManipulator.manipulate(uri);
+  context.resize({ width: 1600 });
+  const rendered = await context.renderAsync();
+  const result = await rendered.saveAsync({ compress: 0.7, format: SaveFormat.JPEG });
+  return result.uri;
+}
+
+export async function extractEventsFromImageViaBackend(
+  accessToken: string,
+  imageUri: string,
+): Promise<ExtractionResult> {
+  const resizedUri = await resizeForUpload(imageUri);
+  const base64 = await FileSystem.readAsStringAsync(resizedUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  const dataUrl = `data:image/jpeg;base64,${base64}`;
+
+  const res = await fetch(CONFIG.EDGE_FUNCTIONS.PROCESS_IMAGE, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+      'X-Extension-Version': CONFIG.APP.VERSION,
+      apikey: CONFIG.SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ image: dataUrl }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    let message = errText;
+    try {
+      const j = JSON.parse(errText);
+      message = j.error ?? errText;
+    } catch {
+      // not JSON
+    }
+    throw new Error(`Backend error ${res.status}: ${message}`);
+  }
+
+  const data = await res.json();
   const events: CalendarEvent[] =
     data?.eventDetails?.events ??
     data?.events ??
