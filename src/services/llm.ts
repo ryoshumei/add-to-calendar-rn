@@ -5,8 +5,8 @@
 //      backend uses its own OpenAI key, 50 req/month per user).
 //   2. Bring-your-own-key → call OpenAI directly from the device.
 //
-// Image input always uses BYOK for now — the shared Edge Function only
-// accepts text. (A future /process-image function can mirror this client.)
+// Image input works in both modes: signed-in users hit the process-image
+// Edge Function; BYOK users call OpenAI vision directly from the device.
 
 import * as FileSystem from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
@@ -112,8 +112,9 @@ export async function extractEventsFromTextViaBackend(
 // ─── Backend image extraction (resize → base64 → process-image) ───────────
 
 /**
- * Resize an image to a max edge of 1600px and JPEG-compress it, to keep the
- * upload payload (and OpenAI token cost) small. Returns a new local file URI.
+ * Resize an image to 1600px wide (aspect ratio preserved) and JPEG-compress
+ * it, to keep the upload payload (and OpenAI token cost) small. Returns a new
+ * local file URI in the cache.
  */
 async function resizeForUpload(uri: string): Promise<string> {
   const context = ImageManipulator.manipulate(uri);
@@ -132,6 +133,8 @@ export async function extractEventsFromImageViaBackend(
     encoding: FileSystem.EncodingType.Base64,
   });
   const dataUrl = `data:image/jpeg;base64,${base64}`;
+  // The resized JPEG was only needed for encoding; drop it from the cache.
+  FileSystem.deleteAsync(resizedUri, { idempotent: true }).catch(() => {});
 
   const res = await fetch(CONFIG.EDGE_FUNCTIONS.PROCESS_IMAGE, {
     method: 'POST',
