@@ -16,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import {
   extractEventsFromImage,
+  extractEventsFromImageViaBackend,
   extractEventsFromText,
   extractEventsFromTextViaBackend,
   type CalendarEvent,
@@ -57,7 +58,7 @@ export default function Home() {
   const canUseBackend = !!auth.session?.access_token;
   const canUseBYOK = !!apiKey;
   const canExtractText = canUseBackend || canUseBYOK;
-  const canExtractImage = canUseBYOK; // backend doesn't support images yet
+  const canExtractImage = canUseBYOK || canUseBackend;
 
   const pickFromLibrary = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -82,8 +83,8 @@ export default function Home() {
     }
     if (imageUri && !canExtractImage) {
       return Alert.alert(
-        'API key required for images',
-        'Image extraction needs your own OpenAI key. Add one in Settings, or remove the image and use text only.',
+        'Sign in or add a key',
+        'Image extraction needs Google sign-in (free, 50/month) or your own OpenAI key. Set up in Settings.',
       );
     }
     if (text.trim() && !canExtractText) {
@@ -108,8 +109,17 @@ export default function Home() {
           if (result.usage) setUsage(result.usage);
         }
       }
-      if (imageUri && canUseBYOK) {
-        collected.push(...(await extractEventsFromImage(apiKey!, imageUri)));
+      if (imageUri) {
+        if (canUseBYOK) {
+          collected.push(...(await extractEventsFromImage(apiKey!, imageUri)));
+        } else if (canUseBackend) {
+          const result = await extractEventsFromImageViaBackend(
+            auth.session!.access_token,
+            imageUri,
+          );
+          collected.push(...result.events);
+          if (result.usage) setUsage(result.usage);
+        }
       }
       if (!collected.length) Alert.alert('No events found', 'The model did not return any events.');
       setEvents(collected);
