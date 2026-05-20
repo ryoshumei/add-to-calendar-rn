@@ -12,6 +12,8 @@ export const CONFIG = {
   EDGE_FUNCTIONS: {
     PROCESS_TEXT:
       'https://pahcnlwgtghsctbnedhx.supabase.co/functions/v1/process-text',
+    PROCESS_IMAGE:
+      'https://pahcnlwgtghsctbnedhx.supabase.co/functions/v1/process-image',
   },
   APP: {
     NAME: 'Add to Calendar',
