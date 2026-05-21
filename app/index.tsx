@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
+import { useShareIntentContext } from 'expo-share-intent';
 import {
   extractEventsFromImage,
   extractEventsFromImageViaBackend,
@@ -54,6 +55,16 @@ export default function Home() {
       refreshKey();
     }, [refreshKey]),
   );
+
+  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentContext();
+  useEffect(() => {
+    if (!hasShareIntent) return;
+    const file = shareIntent.files?.[0];
+    if (file?.mimeType?.startsWith('image/')) {
+      setImageUri(file.path);
+    }
+    resetShareIntent();
+  }, [hasShareIntent, shareIntent, resetShareIntent]);
 
   const canUseBackend = !!auth.session?.access_token;
   const canUseBYOK = !!apiKey;
