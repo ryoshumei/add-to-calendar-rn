@@ -51,7 +51,7 @@
           "iosActivationRules": {
             "NSExtensionActivationSupportsImageWithMaxCount": 1
           },
-          "iosShareExtensionName": "Add to Calendar",
+          "iosShareExtensionName": "Add to Calendar Share",
           "iosAppGroupIdentifier": "group.com.addtocalendar.rn",
           "androidIntentFilters": ["image/*"]
         }
