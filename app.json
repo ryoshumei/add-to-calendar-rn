@@ -44,6 +44,17 @@
         {
           "calendarPermission": "The app needs to access your calendar to add events."
         }
+      ],
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsImageWithMaxCount": 1
+          },
+          "iosShareExtensionName": "Add to Calendar Share",
+          "iosAppGroupIdentifier": "group.com.addtocalendar.rn",
+          "androidIntentFilters": ["image/*"]
+        }
       ]
     ],
     "experiments": {
