@@ -4,6 +4,7 @@
     "slug": "add-to-calendar-rn",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "scheme": "addtocalendar",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
