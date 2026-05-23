@@ -53,4 +53,4 @@ We may update this policy; the "Last updated" date reflects the latest version.
 
 ## Contact
 
-Questions: [your contact email]
+Questions: ryoshumei@gmail.com
