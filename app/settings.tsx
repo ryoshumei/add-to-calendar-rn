@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { clearApiKey, getApiKey, setApiKey } from '../src/services/storage';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import Svg, { Path } from 'react-native-svg';
 import {
   deleteAccount,
   isAppleSignInAvailable,
@@ -91,64 +92,64 @@ export default function Settings() {
       contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xl * 2 }}
     >
       <SectionHeader theme={theme}>ACCOUNT</SectionHeader>
-      {!auth.user && appleAvailable && (
-        <View style={{ marginBottom: spacing.sm }}>
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-            buttonStyle={
-              colorScheme === 'dark'
-                ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
-                : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-            }
-            cornerRadius={radius.md}
-            style={{ width: '100%', height: 48 }}
+      {auth.user ? (
+        <Group theme={theme}>
+          <Row theme={theme}>
+            <Text style={{ fontSize: 17, color: theme.label, flex: 1 }}>Signed in</Text>
+            <Text style={{ fontSize: 15, color: theme.secondaryLabel }} numberOfLines={1}>
+              {auth.user.email}
+            </Text>
+          </Row>
+          <Hairline theme={theme} />
+          <Pressable
             onPress={async () => {
-              try {
-                await signInWithApple();
-              } catch (e) {
-                Alert.alert('Apple sign-in failed', String((e as Error).message ?? e));
-              }
+              await signOut();
             }}
-          />
-        </View>
-      )}
-      <Group theme={theme}>
-        {auth.user ? (
-          <>
-            <Row theme={theme}>
-              <Text style={{ fontSize: 17, color: theme.label, flex: 1 }}>Signed in</Text>
-              <Text style={{ fontSize: 15, color: theme.secondaryLabel }} numberOfLines={1}>
-                {auth.user.email}
-              </Text>
-            </Row>
-            <Hairline theme={theme} />
-            <Pressable
+            style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
+          >
+            <Text style={{ color: theme.systemBlue, fontSize: 17, flex: 1 }}>Sign out</Text>
+          </Pressable>
+          <Hairline theme={theme} />
+          <Pressable
+            onPress={handleDeleteAccount}
+            style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
+          >
+            <Text style={{ color: theme.systemRed, fontSize: 17, flex: 1 }}>Delete account</Text>
+          </Pressable>
+        </Group>
+      ) : appleAvailable || googleConfigured ? (
+        <View style={{ gap: spacing.sm }}>
+          {appleAvailable && (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={
+                colorScheme === 'dark'
+                  ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                  : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+              }
+              cornerRadius={radius.md}
+              style={{ width: '100%', height: 48 }}
               onPress={async () => {
-                await signOut();
+                try {
+                  await signInWithApple();
+                } catch (e) {
+                  Alert.alert('Apple sign-in failed', String((e as Error).message ?? e));
+                }
               }}
-              style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
-            >
-              <Text style={{ color: theme.systemBlue, fontSize: 17, flex: 1 }}>Sign out</Text>
-            </Pressable>
-            <Hairline theme={theme} />
-            <Pressable
-              onPress={handleDeleteAccount}
-              style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
-            >
-              <Text style={{ color: theme.systemRed, fontSize: 17, flex: 1 }}>Delete account</Text>
-            </Pressable>
-          </>
-        ) : googleConfigured ? (
-          <GoogleSignInRow theme={theme} />
-        ) : (
+            />
+          )}
+          {googleConfigured && <GoogleSignInButton />}
+        </View>
+      ) : (
+        <Group theme={theme}>
           <View style={[styles.row, { opacity: 0.5 }]}>
             <Text style={{ fontSize: 22, marginRight: spacing.sm }}>🔐</Text>
             <Text style={{ fontSize: 17, color: theme.label, flex: 1 }}>
-              Google sign-in not configured
+              Sign-in not configured
             </Text>
           </View>
-        )}
-      </Group>
+        </Group>
+      )}
       <Footnote theme={theme}>
         {auth.user
           ? 'Calendar event extraction uses the shared backend (50 requests/month). Add an OpenAI key below to use it instead.'
@@ -256,21 +257,50 @@ export default function Settings() {
   );
 }
 
-function GoogleSignInRow({ theme }: { theme: ReturnType<typeof useTheme> }) {
+// Official Google "G" mark (multicolor), per Google branding guidelines.
+function GoogleGLogo({ size = 18 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 48 48">
+      <Path
+        fill="#4285F4"
+        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+      />
+      <Path
+        fill="#34A853"
+        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+      />
+      <Path
+        fill="#FBBC05"
+        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+      />
+      <Path
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+      />
+    </Svg>
+  );
+}
+
+// Branded "Sign in with Google" button, sized to match the native Apple button.
+function GoogleSignInButton() {
   const google = useGoogleSignIn();
+  const dark = useColorScheme() === 'dark';
+  const bg = dark ? '#131314' : '#FFFFFF';
+  const borderColor = dark ? '#8E918F' : '#747775';
+  const textColor = dark ? '#E3E3E3' : '#1F1F1F';
   return (
     <Pressable
       disabled={!google.ready}
       onPress={() => google.signIn()}
       style={({ pressed }) => [
-        styles.row,
-        pressed && { backgroundColor: theme.fill },
-        !google.ready && { opacity: 0.5 },
+        styles.providerBtn,
+        { backgroundColor: bg, borderColor, opacity: !google.ready ? 0.5 : pressed ? 0.85 : 1 },
       ]}
     >
-      <Text style={{ fontSize: 22, marginRight: spacing.sm }}>🔐</Text>
-      <Text style={{ fontSize: 17, color: theme.label, flex: 1 }}>Sign in with Google</Text>
-      <Text style={{ color: theme.tertiaryLabel, fontSize: 17 }}>›</Text>
+      <GoogleGLogo size={18} />
+      <Text style={{ color: textColor, fontSize: 17, fontWeight: '600', marginLeft: spacing.sm }}>
+        Sign in with Google
+      </Text>
     </Pressable>
   );
 }
@@ -371,6 +401,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     minHeight: 44,
+  },
+  providerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    borderRadius: radius.md,
+    borderWidth: 1,
   },
   input: {
     borderWidth: StyleSheet.hairlineWidth,

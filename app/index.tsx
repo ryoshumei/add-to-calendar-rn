@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { useShareIntentContext } from 'expo-share-intent';
 import {
@@ -95,13 +96,13 @@ export default function Home() {
     if (imageUri && !canExtractImage) {
       return Alert.alert(
         'Sign in or add a key',
-        'Image extraction needs Google sign-in (free, 50/month) or your own OpenAI key. Set up in Settings.',
+        'Image extraction needs sign-in (free, 50/month) or your own OpenAI key. Set up in Settings.',
       );
     }
     if (text.trim() && !canExtractText) {
       return Alert.alert(
         'Sign in or add a key',
-        'Sign in with Google in Settings (free, 50/month) or add your OpenAI API key.',
+        'Sign in (free, 50/month) or add an OpenAI API key — both in Settings.',
       );
     }
     setLoading(true);
@@ -196,33 +197,33 @@ export default function Home() {
         </Section>
 
         <Section title="IMAGE" theme={theme}>
-          <View
-            style={[
-              styles.card,
-              { backgroundColor: theme.card, borderColor: theme.separator },
-            ]}
-          >
-            <ListRow
-              label="Choose photo"
-              icon="🖼️"
-              onPress={pickFromLibrary}
-              theme={theme}
-              first
-            />
-            <Separator theme={theme} />
-            <ListRow label="Take photo" icon="📷" onPress={takePhoto} theme={theme} />
-            {imageUri && (
-              <>
-                <Separator theme={theme} />
-                <View style={{ padding: spacing.md, gap: spacing.sm }}>
-                  <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="cover" />
-                  <Pressable onPress={() => setImageUri(null)}>
-                    <Text style={{ color: theme.systemRed, fontSize: 15 }}>Remove image</Text>
-                  </Pressable>
-                </View>
-              </>
-            )}
+          <View style={{ flexDirection: 'row', gap: spacing.md }}>
+            <PhotoSourceCard label="Choose photo" onPress={pickFromLibrary} theme={theme}>
+              <PhotoIcon color={theme.systemBlue} />
+            </PhotoSourceCard>
+            <PhotoSourceCard label="Take photo" onPress={takePhoto} theme={theme}>
+              <CameraIcon color={theme.systemBlue} />
+            </PhotoSourceCard>
           </View>
+          {imageUri && (
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.separator,
+                  marginTop: spacing.md,
+                },
+              ]}
+            >
+              <View style={{ padding: spacing.md, gap: spacing.sm }}>
+                <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="cover" />
+                <Pressable onPress={() => setImageUri(null)}>
+                  <Text style={{ color: theme.systemRed, fontSize: 15 }}>Remove image</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
         </Section>
 
         <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.md }}>
@@ -307,7 +308,7 @@ function StatusBanner({
   } else if (apiKey) {
     message = `Using your OpenAI key (sk…${apiKey.slice(-4)})`;
   } else {
-    message = 'Set up Google sign-in or add an OpenAI key in Settings';
+    message = 'Sign in or add an OpenAI key in Settings';
     tone = 'warn';
   }
 
@@ -366,32 +367,59 @@ function Section({
   );
 }
 
-function ListRow({
+function PhotoSourceCard({
   label,
-  icon,
   onPress,
   theme,
-  first,
+  children,
 }: {
   label: string;
-  icon?: string;
   onPress: () => void;
   theme: ReturnType<typeof useTheme>;
-  first?: boolean;
+  children: React.ReactNode;
 }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
-        styles.row,
-        first && { borderTopLeftRadius: radius.md, borderTopRightRadius: radius.md },
-        pressed && { backgroundColor: theme.fill },
+        styles.photoCard,
+        { backgroundColor: theme.card, borderColor: theme.separator, opacity: pressed ? 0.7 : 1 },
       ]}
     >
-      {icon ? <Text style={{ fontSize: 20, marginRight: spacing.sm }}>{icon}</Text> : null}
-      <Text style={{ color: theme.label, fontSize: 17, flex: 1 }}>{label}</Text>
-      <Text style={{ color: theme.tertiaryLabel, fontSize: 17 }}>›</Text>
+      {children}
+      <Text style={{ color: theme.label, fontSize: 15, fontWeight: '500', marginTop: spacing.sm }}>
+        {label}
+      </Text>
     </Pressable>
+  );
+}
+
+const ICON_STROKE = (color: string) => ({
+  stroke: color,
+  strokeWidth: 2,
+  fill: 'none' as const,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+});
+
+function PhotoIcon({ color, size = 28 }: { color: string; size?: number }) {
+  const s = ICON_STROKE(color);
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Rect x={3} y={3} width={18} height={18} rx={2} {...s} />
+      <Circle cx={8.5} cy={8.5} r={1.5} {...s} />
+      <Path d="M21 15l-5-5L5 21" {...s} />
+    </Svg>
+  );
+}
+
+function CameraIcon({ color, size = 28 }: { color: string; size?: number }) {
+  const s = ICON_STROKE(color);
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" {...s} />
+      <Circle cx={12} cy={13} r={4} {...s} />
+    </Svg>
   );
 }
 
@@ -482,6 +510,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
+  },
+  photoCard: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   row: {
     flexDirection: 'row',
