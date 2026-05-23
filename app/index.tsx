@@ -95,13 +95,13 @@ export default function Home() {
     if (imageUri && !canExtractImage) {
       return Alert.alert(
         'Sign in or add a key',
-        'Image extraction needs Google sign-in (free, 50/month) or your own OpenAI key. Set up in Settings.',
+        'Image extraction needs sign-in (free, 50/month) or your own OpenAI key. Set up in Settings.',
       );
     }
     if (text.trim() && !canExtractText) {
       return Alert.alert(
         'Sign in or add a key',
-        'Sign in with Google in Settings (free, 50/month) or add your OpenAI API key.',
+        'Sign in (free, 50/month) or add an OpenAI API key — both in Settings.',
       );
     }
     setLoading(true);
@@ -307,7 +307,7 @@ function StatusBanner({
   } else if (apiKey) {
     message = `Using your OpenAI key (sk…${apiKey.slice(-4)})`;
   } else {
-    message = 'Set up Google sign-in or add an OpenAI key in Settings';
+    message = 'Sign in or add an OpenAI key in Settings';
     tone = 'warn';
   }
 
