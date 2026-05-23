@@ -134,7 +134,7 @@ export async function signInWithApple(): Promise<void> {
     const accessToken = data.session?.access_token;
     if (accessToken && credential.authorizationCode) {
       try {
-        await fetch(CONFIG.EDGE_FUNCTIONS.APPLE_LINK, {
+        const linkRes = await fetch(CONFIG.EDGE_FUNCTIONS.APPLE_LINK, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -143,6 +143,9 @@ export async function signInWithApple(): Promise<void> {
           },
           body: JSON.stringify({ authorizationCode: credential.authorizationCode }),
         });
+        if (!linkRes.ok) {
+          console.warn('apple-link failed (revocation unavailable):', linkRes.status);
+        }
       } catch (linkErr) {
         console.warn('apple-link failed (revocation unavailable):', linkErr);
       }
