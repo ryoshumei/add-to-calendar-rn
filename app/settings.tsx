@@ -38,7 +38,7 @@ export default function Settings() {
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete account',
-      'This permanently deletes your account. Your free monthly usage resets. This cannot be undone.',
+      'This permanently deletes your account and all your data. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
