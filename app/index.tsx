@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { useShareIntentContext } from 'expo-share-intent';
 import {
@@ -198,18 +198,12 @@ export default function Home() {
 
         <Section title="IMAGE" theme={theme}>
           <View style={{ flexDirection: 'row', gap: spacing.md }}>
-            <PhotoSourceCard
-              label="Choose photo"
-              icon="images-outline"
-              onPress={pickFromLibrary}
-              theme={theme}
-            />
-            <PhotoSourceCard
-              label="Take photo"
-              icon="camera-outline"
-              onPress={takePhoto}
-              theme={theme}
-            />
+            <PhotoSourceCard label="Choose photo" onPress={pickFromLibrary} theme={theme}>
+              <PhotoIcon color={theme.systemBlue} />
+            </PhotoSourceCard>
+            <PhotoSourceCard label="Take photo" onPress={takePhoto} theme={theme}>
+              <CameraIcon color={theme.systemBlue} />
+            </PhotoSourceCard>
           </View>
           {imageUri && (
             <View
@@ -375,14 +369,14 @@ function Section({
 
 function PhotoSourceCard({
   label,
-  icon,
   onPress,
   theme,
+  children,
 }: {
   label: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
   onPress: () => void;
   theme: ReturnType<typeof useTheme>;
+  children: React.ReactNode;
 }) {
   return (
     <Pressable
@@ -392,11 +386,40 @@ function PhotoSourceCard({
         { backgroundColor: theme.card, borderColor: theme.separator, opacity: pressed ? 0.7 : 1 },
       ]}
     >
-      <Ionicons name={icon} size={28} color={theme.systemBlue} />
+      {children}
       <Text style={{ color: theme.label, fontSize: 15, fontWeight: '500', marginTop: spacing.sm }}>
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+const ICON_STROKE = (color: string) => ({
+  stroke: color,
+  strokeWidth: 2,
+  fill: 'none' as const,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+});
+
+function PhotoIcon({ color, size = 28 }: { color: string; size?: number }) {
+  const s = ICON_STROKE(color);
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Rect x={3} y={3} width={18} height={18} rx={2} {...s} />
+      <Circle cx={8.5} cy={8.5} r={1.5} {...s} />
+      <Path d="M21 15l-5-5L5 21" {...s} />
+    </Svg>
+  );
+}
+
+function CameraIcon({ color, size = 28 }: { color: string; size?: number }) {
+  const s = ICON_STROKE(color);
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" {...s} />
+      <Circle cx={12} cy={13} r={4} {...s} />
+    </Svg>
   );
 }
 
