@@ -7,10 +7,19 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useColorScheme,
   View,
 } from 'react-native';
 import { clearApiKey, getApiKey, setApiKey } from '../src/services/storage';
-import { signOut, useAuth, useGoogleSignIn } from '../src/services/auth';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import {
+  deleteAccount,
+  isAppleSignInAvailable,
+  signInWithApple,
+  signOut,
+  useAuth,
+  useGoogleSignIn,
+} from '../src/services/auth';
 import { CONFIG } from '../src/config';
 import { radius, spacing, useTheme } from '../src/ui/theme';
 
@@ -20,6 +29,34 @@ export default function Settings() {
   const [key, setKey] = useState('');
   const [saved, setSaved] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const colorScheme = useColorScheme();
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  useEffect(() => {
+    isAppleSignInAvailable().then(setAppleAvailable);
+  }, []);
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete account',
+      'This permanently deletes your account. Your free monthly usage resets. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = auth.session?.access_token;
+              if (!token) throw new Error('No active session');
+              await deleteAccount(token);
+            } catch (e) {
+              Alert.alert('Delete failed', String((e as Error).message ?? e));
+            }
+          },
+        },
+      ],
+    );
+  };
 
   useEffect(() => {
     getApiKey().then((k) => {
@@ -54,6 +91,27 @@ export default function Settings() {
       contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xl * 2 }}
     >
       <SectionHeader theme={theme}>ACCOUNT</SectionHeader>
+      {!auth.user && appleAvailable && (
+        <View style={{ marginBottom: spacing.sm }}>
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+            buttonStyle={
+              colorScheme === 'dark'
+                ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+            }
+            cornerRadius={radius.md}
+            style={{ width: '100%', height: 48 }}
+            onPress={async () => {
+              try {
+                await signInWithApple();
+              } catch (e) {
+                Alert.alert('Apple sign-in failed', String((e as Error).message ?? e));
+              }
+            }}
+          />
+        </View>
+      )}
       <Group theme={theme}>
         {auth.user ? (
           <>
@@ -70,7 +128,14 @@ export default function Settings() {
               }}
               style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
             >
-              <Text style={{ color: theme.systemRed, fontSize: 17, flex: 1 }}>Sign out</Text>
+              <Text style={{ color: theme.systemBlue, fontSize: 17, flex: 1 }}>Sign out</Text>
+            </Pressable>
+            <Hairline theme={theme} />
+            <Pressable
+              onPress={handleDeleteAccount}
+              style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
+            >
+              <Text style={{ color: theme.systemRed, fontSize: 17, flex: 1 }}>Delete account</Text>
             </Pressable>
           </>
         ) : googleConfigured ? (

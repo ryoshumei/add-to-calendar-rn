@@ -2,8 +2,9 @@
 // expose — it's the public Supabase client key. Edge Functions enforce auth.
 //
 // Forking? Replace SUPABASE_URL, SUPABASE_ANON_KEY, and EDGE_FUNCTIONS.PROCESS_TEXT
-// with values from your own Supabase project, and deploy the process-text
-// Edge Function there (see the sibling Chrome extension repo for source).
+// with values from your own Supabase project, and deploy the process-text,
+// apple-link, and delete-account Edge Functions there (see the sibling Chrome extension
+// repo for source).
 
 export const CONFIG = {
   SUPABASE_URL: 'https://pahcnlwgtghsctbnedhx.supabase.co',
@@ -14,6 +15,10 @@ export const CONFIG = {
       'https://pahcnlwgtghsctbnedhx.supabase.co/functions/v1/process-text',
     PROCESS_IMAGE:
       'https://pahcnlwgtghsctbnedhx.supabase.co/functions/v1/process-image',
+    DELETE_ACCOUNT:
+      'https://pahcnlwgtghsctbnedhx.supabase.co/functions/v1/delete-account',
+    APPLE_LINK:
+      'https://pahcnlwgtghsctbnedhx.supabase.co/functions/v1/apple-link',
   },
   APP: {
     NAME: 'Add to Calendar',

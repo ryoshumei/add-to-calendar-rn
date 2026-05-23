@@ -145,3 +145,35 @@ Each extracted event has two buttons:
 | iOS | `NSCalendarsFullAccessUsageDescription` | Add events |
 | Android | `CAMERA` / `READ_EXTERNAL_STORAGE` | Pick / capture |
 | Android | `READ_CALENDAR` / `WRITE_CALENDAR` | Add events |
+
+## App Store readiness — auth & account deletion
+
+This app offers **Sign in with Apple** and **Google sign-in** (Guideline 4.8:
+when you offer a social login, you must also offer Sign in with Apple — Apple
+removed the "exclusively" wording, so an optional Google login + BYOK does not
+exempt you). It also offers **in-app account deletion** (Guideline 5.1.1(v)).
+
+### One-time setup (maintainer / fork)
+1. **Apple Developer:** enable the "Sign in with Apple" capability on App ID
+   `com.addtocalendar.rn`, and create a **Sign in with Apple key** (Keys → +);
+   note the **Key ID** + your **Team ID**, and download the `.p8`.
+2. **Supabase → Authentication → Providers → Apple:** enable it and add bundle
+   ID `com.addtocalendar.rn` to the authorized client IDs.
+3. **Supabase secrets** (for the Edge Functions):
+   `supabase secrets set APPLE_CLIENT_ID=com.addtocalendar.rn APPLE_TEAM_ID=<team> APPLE_KEY_ID=<key> APPLE_PRIVATE_KEY="$(cat AuthKey_XXXX.p8)"`
+4. Apply the migration and deploy:
+   `supabase db push` (or apply `apple_refresh_tokens`), then
+   `supabase functions deploy apple-link delete-account`.
+
+### App Review notes (paste into App Store Connect)
+> Sign-in is optional. Core functionality (extract events from text/images, add
+> to calendar) works with no account by using your own OpenAI API key (Settings
+> → OpenAI API key). We offer both Sign in with Apple and Google. Account
+> deletion is in Settings → Delete account (signed in), which permanently
+> deletes the account and revokes Apple tokens. Reviewer test key (BYOK):
+> `<provide a low-cap OpenAI key here>`.
+
+### Known follow-up
+- Apple token revocation is implemented (delete-account → `/auth/revoke`); no
+  Google revocation is required (the Google token is discarded at sign-in and
+  never stored).
