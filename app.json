@@ -19,7 +19,8 @@
         "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to use the camera to capture event images.",
         "NSPhotoLibraryUsageDescription": "Allow $(PRODUCT_NAME) to access photos to import event images.",
         "NSCalendarsUsageDescription": "Allow $(PRODUCT_NAME) to add events to your calendar.",
-        "NSCalendarsFullAccessUsageDescription": "Allow $(PRODUCT_NAME) to add events to your calendar."
+        "NSCalendarsFullAccessUsageDescription": "Allow $(PRODUCT_NAME) to add events to your calendar.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -54,6 +55,7 @@
       [
         "expo-share-intent",
         {
+          "disableExperimental": true,
           "iosActivationRules": {
             "NSExtensionActivationSupportsImageWithMaxCount": 1
           },
@@ -73,7 +75,24 @@
         "origin": false
       },
       "eas": {
-        "projectId": "2291ff41-f8b9-49fe-87c8-02289df65db4"
+        "projectId": "2291ff41-f8b9-49fe-87c8-02289df65db4",
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "AddtoCalendarShare",
+                  "bundleIdentifier": "com.addtocalendar.rn.share-extension",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.addtocalendar.rn"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
       }
     }
   }
