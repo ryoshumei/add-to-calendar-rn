@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { useShareIntentContext } from 'expo-share-intent';
 import {
@@ -196,33 +197,39 @@ export default function Home() {
         </Section>
 
         <Section title="IMAGE" theme={theme}>
-          <View
-            style={[
-              styles.card,
-              { backgroundColor: theme.card, borderColor: theme.separator },
-            ]}
-          >
-            <ListRow
+          <View style={{ flexDirection: 'row', gap: spacing.md }}>
+            <PhotoSourceCard
               label="Choose photo"
-              icon="🖼️"
+              icon="images-outline"
               onPress={pickFromLibrary}
               theme={theme}
-              first
             />
-            <Separator theme={theme} />
-            <ListRow label="Take photo" icon="📷" onPress={takePhoto} theme={theme} />
-            {imageUri && (
-              <>
-                <Separator theme={theme} />
-                <View style={{ padding: spacing.md, gap: spacing.sm }}>
-                  <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="cover" />
-                  <Pressable onPress={() => setImageUri(null)}>
-                    <Text style={{ color: theme.systemRed, fontSize: 15 }}>Remove image</Text>
-                  </Pressable>
-                </View>
-              </>
-            )}
+            <PhotoSourceCard
+              label="Take photo"
+              icon="camera-outline"
+              onPress={takePhoto}
+              theme={theme}
+            />
           </View>
+          {imageUri && (
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.separator,
+                  marginTop: spacing.md,
+                },
+              ]}
+            >
+              <View style={{ padding: spacing.md, gap: spacing.sm }}>
+                <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="cover" />
+                <Pressable onPress={() => setImageUri(null)}>
+                  <Text style={{ color: theme.systemRed, fontSize: 15 }}>Remove image</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
         </Section>
 
         <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.md }}>
@@ -366,31 +373,29 @@ function Section({
   );
 }
 
-function ListRow({
+function PhotoSourceCard({
   label,
   icon,
   onPress,
   theme,
-  first,
 }: {
   label: string;
-  icon?: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
   onPress: () => void;
   theme: ReturnType<typeof useTheme>;
-  first?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
-        styles.row,
-        first && { borderTopLeftRadius: radius.md, borderTopRightRadius: radius.md },
-        pressed && { backgroundColor: theme.fill },
+        styles.photoCard,
+        { backgroundColor: theme.card, borderColor: theme.separator, opacity: pressed ? 0.7 : 1 },
       ]}
     >
-      {icon ? <Text style={{ fontSize: 20, marginRight: spacing.sm }}>{icon}</Text> : null}
-      <Text style={{ color: theme.label, fontSize: 17, flex: 1 }}>{label}</Text>
-      <Text style={{ color: theme.tertiaryLabel, fontSize: 17 }}>›</Text>
+      <Ionicons name={icon} size={28} color={theme.systemBlue} />
+      <Text style={{ color: theme.label, fontSize: 15, fontWeight: '500', marginTop: spacing.sm }}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -482,6 +487,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
+  },
+  photoCard: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   row: {
     flexDirection: 'row',
