@@ -9,6 +9,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { CONFIG } from '../config';
 import type { Session, User } from '@supabase/supabase-js';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -91,4 +93,89 @@ export async function signOut(): Promise<void> {
  */
 export function getRedirectUri(): string {
   return AuthSession.makeRedirectUri({ scheme: 'addtocalendar' });
+}
+
+/**
+ * Whether native Sign in with Apple is available (iOS 13+; false on Android,
+ * web, and simulators without an Apple ID).
+ */
+export function isAppleSignInAvailable(): Promise<boolean> {
+  return AppleAuthentication.isAvailableAsync();
+}
+
+/**
+ * Native Sign in with Apple → Supabase session. Mirrors useGoogleSignIn but is
+ * a one-shot async call (no expo-auth-session request/response hook needed).
+ * After sign-in, best-effort links the Apple authorizationCode to the backend
+ * so the account can be revoked at deletion. User cancellation is swallowed.
+ */
+export async function signInWithApple(): Promise<void> {
+  try {
+    const rawNonce = Crypto.randomUUID();
+    const hashedNonce = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      rawNonce,
+    );
+    const credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [AppleAuthentication.AppleAuthenticationScope.EMAIL],
+      nonce: hashedNonce,
+    });
+    if (!credential.identityToken) {
+      throw new Error('No identity token returned from Apple');
+    }
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: 'apple',
+      token: credential.identityToken,
+      nonce: rawNonce,
+    });
+    if (error) throw error;
+
+    // Best-effort: store the Apple refresh token for later revocation.
+    const accessToken = data.session?.access_token;
+    if (accessToken && credential.authorizationCode) {
+      try {
+        await fetch(CONFIG.EDGE_FUNCTIONS.APPLE_LINK, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+            apikey: CONFIG.SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ authorizationCode: credential.authorizationCode }),
+        });
+      } catch (linkErr) {
+        console.warn('apple-link failed (revocation unavailable):', linkErr);
+      }
+    }
+  } catch (e) {
+    if ((e as { code?: string }).code === 'ERR_REQUEST_CANCELED') return;
+    throw e;
+  }
+}
+
+/**
+ * Permanently delete the signed-in user's account via the delete-account Edge
+ * Function (revokes Apple tokens server-side, deletes data + auth user), then
+ * signs out locally.
+ */
+export async function deleteAccount(accessToken: string): Promise<void> {
+  const res = await fetch(CONFIG.EDGE_FUNCTIONS.DELETE_ACCOUNT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+      apikey: CONFIG.SUPABASE_ANON_KEY,
+    },
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    let message = errText;
+    try {
+      message = JSON.parse(errText).error ?? errText;
+    } catch {
+      // not JSON
+    }
+    throw new Error(`Delete failed ${res.status}: ${message}`);
+  }
+  await supabase.auth.signOut();
 }
