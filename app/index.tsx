@@ -29,6 +29,7 @@ import {
   addEventToDeviceCalendar,
   openGoogleCalendar,
 } from '../src/services/calendar';
+import { recordSuccessfulAddAndMaybeAskForReview } from '../src/services/review';
 import { useAuth } from '../src/services/auth';
 import { radius, spacing, useTheme } from '../src/ui/theme';
 
@@ -145,7 +146,16 @@ export default function Home() {
   const handleAddNative = async (event: CalendarEvent) => {
     try {
       await addEventToDeviceCalendar(event);
-      Alert.alert('Added', `"${event.title}" added to your calendar.`);
+      // Show success first; ask for a review only after the user dismisses it,
+      // so the two native dialogs never collide.
+      Alert.alert('Added', `"${event.title}" added to your calendar.`, [
+        {
+          text: 'OK',
+          onPress: () => {
+            void recordSuccessfulAddAndMaybeAskForReview();
+          },
+        },
+      ]);
     } catch (e: unknown) {
       Alert.alert('Failed', String((e as Error).message ?? e));
     }
