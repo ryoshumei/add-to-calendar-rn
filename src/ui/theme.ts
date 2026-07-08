@@ -19,6 +19,11 @@ const light = {
   separator: '#3C3C4349',
   background: '#F2F2F7', // grouped table bg
   groupedBackground: '#F2F2F7',
+  // Backgrounds for modal sheets. iOS keeps these identical in light mode but
+  // lightens them one step in dark mode so a sheet stands out from the black
+  // screen it slides over.
+  elevatedGroupedBackground: '#F2F2F7',
+  elevatedCard: '#FFFFFF',
   card: '#FFFFFF',
   fill: '#78788033',
 };
@@ -39,6 +44,8 @@ const dark = {
   separator: '#54545899',
   background: '#000000',
   groupedBackground: '#000000',
+  elevatedGroupedBackground: '#1C1C1E',
+  elevatedCard: '#2C2C2E',
   card: '#1C1C1E',
   fill: '#7878805C',
 };

@@ -30,7 +30,15 @@ export default function RootLayout() {
             <Stack.Screen name="index" options={{ title: 'Add to Calendar' }} />
             <Stack.Screen
               name="settings"
-              options={{ title: 'Settings', presentation: 'modal', headerLargeTitle: false }}
+              options={{
+                title: 'Settings',
+                presentation: 'modal',
+                headerLargeTitle: false,
+                // Elevated backgrounds so the sheet reads as a card over the
+                // dimmed screen behind it in dark mode (matches native iOS).
+                headerStyle: { backgroundColor: theme.elevatedGroupedBackground },
+                contentStyle: { backgroundColor: theme.elevatedGroupedBackground },
+              }}
             />
           </Stack>
         </SafeAreaProvider>

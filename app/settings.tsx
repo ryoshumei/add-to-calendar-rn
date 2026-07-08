@@ -22,10 +22,18 @@ import {
   useGoogleSignIn,
 } from '../src/services/auth';
 import { CONFIG } from '../src/config';
-import { radius, spacing, useTheme } from '../src/ui/theme';
+import { radius, spacing, useTheme, type Theme } from '../src/ui/theme';
 
 export default function Settings() {
-  const theme = useTheme();
+  // This screen is presented as a modal sheet, so remap the backgrounds to
+  // their elevated variants — in dark mode the base grouped background is pure
+  // black and the sheet would be indistinguishable from the screen behind it.
+  const baseTheme = useTheme();
+  const theme: Theme = {
+    ...baseTheme,
+    groupedBackground: baseTheme.elevatedGroupedBackground,
+    card: baseTheme.elevatedCard,
+  };
   const auth = useAuth();
   const [key, setKey] = useState('');
   const [saved, setSaved] = useState<string | null>(null);

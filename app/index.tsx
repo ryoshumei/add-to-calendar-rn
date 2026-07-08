@@ -184,6 +184,7 @@ export default function Home() {
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{ paddingBottom: spacing.xl * 2 }}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <StatusBanner
           auth={auth}
@@ -203,6 +204,11 @@ export default function Home() {
             multiline
             value={text}
             onChangeText={setText}
+            // Return dismisses the keyboard (instead of inserting a newline)
+            // so the Extract button isn't left covered. Pasted text keeps its
+            // line breaks.
+            returnKeyType="done"
+            submitBehavior="blurAndSubmit"
           />
         </Section>
 
