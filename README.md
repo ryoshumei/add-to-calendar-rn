@@ -1,6 +1,6 @@
 # Add to Calendar (React Native)
 
-iOS-first port of the [add-to-calendar](../add-to-calendar) Chrome extension.
+iOS-first port of the [add-to-calendar](https://github.com/ryoshumei/add-to-calendar) Chrome extension.
 Same shared Supabase backend, same Google sign-in flow, plus:
 
 - **Image-to-event** — pick a poster, screenshot, or invite photo; OpenAI vision
