@@ -1,0 +1,55 @@
+diff --git a/node_modules/expo-share-intent/plugin/build/ios/ShareExtensionViewController.swift b/node_modules/expo-share-intent/plugin/build/ios/ShareExtensionViewController.swift
+index a8b001a..a2002d3 100644
+--- a/node_modules/expo-share-intent/plugin/build/ios/ShareExtensionViewController.swift
++++ b/node_modules/expo-share-intent/plugin/build/ios/ShareExtensionViewController.swift
+@@ -160,11 +160,27 @@ class ShareViewController: UIViewController {
+             url = dataURL
+           } else if let imageData = item as? UIImage {
+             url = self.saveScreenshot(imageData)
++          } else if let data = item as? Data {
++            // Screenshots shared from the markup editor arrive as raw image
++            // data, not a file URL or UIImage.
++            if let image = UIImage(data: data) {
++              url = self.saveScreenshot(image)
++            } else {
++              NSLog("[ERROR] handleImages: Failed to create UIImage from Data")
++            }
++          } else {
++            NSLog("[ERROR] handleImages: Item is unexpected type: \(type(of: item))")
++          }
++
++          guard let safeURL = url else {
++            NSLog("[ERROR] handleImages: Failed to get URL for image item")
++            self.dismissWithError(message: "Failed to process image")
++            return
+           }
+ 
+           var pixelWidth: Int? = nil
+           var pixelHeight: Int? = nil
+-          if let imageSource = CGImageSourceCreateWithURL(url! as CFURL, nil) {
++          if let imageSource = CGImageSourceCreateWithURL(safeURL as CFURL, nil) {
+             if let imageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil)
+               as Dictionary?
+             {
+@@ -185,16 +201,16 @@ class ShareViewController: UIViewController {
+           }
+ 
+           // Always copy
+-          let fileName = self.getFileName(from: url!, type: .image)
+-          let fileExtension = self.getExtension(from: url!, type: .image)
+-          let fileSize = self.getFileSize(from: url!)
+-          let mimeType = url!.mimeType(ext: fileExtension)
++          let fileName = self.getFileName(from: safeURL, type: .image)
++          let fileExtension = self.getExtension(from: safeURL, type: .image)
++          let fileSize = self.getFileSize(from: safeURL)
++          let mimeType = safeURL.mimeType(ext: fileExtension)
+           let newName = "\(UUID().uuidString).\(fileExtension)"
+           let newPath = FileManager.default
+             .containerURL(
+               forSecurityApplicationGroupIdentifier: self.hostAppGroupIdentifier)!
+             .appendingPathComponent(newName)
+-          let copied = self.copyFile(at: url!, to: newPath)
++          let copied = self.copyFile(at: safeURL, to: newPath)
+           if copied {
+             self.sharedMedia.append(
+               SharedMediaFile(
