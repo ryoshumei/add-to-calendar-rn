@@ -2,7 +2,7 @@
   "expo": {
     "name": "Add to Calendar",
     "slug": "add-to-calendar-rn",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "addtocalendar",
