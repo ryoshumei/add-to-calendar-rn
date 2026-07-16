@@ -20,6 +20,10 @@ problem*, not browsing feeds. Per product: name/subtitle carry the heaviest keyw
 keyword field has zero duplicates, screenshots show the payoff in shot #1, description
 survives a truthfulness audit (Guideline 2.3). Revisit quarterly; treat the listing as
 code (EAS Metadata / `store.config.json`).
+Global focus makes **store localization** the cheapest big lever: localized keywords +
+description + screenshots in major storefronts (ES, PT-BR, DE, FR, JA, ZH…) unlock
+search traffic English listings never see. AI makes this nearly free — do it once the
+English listing is proven.
 
 **2. The ratings flywheel.**
 In-app review prompt at the moment of delivered value (never at launch, never before
@@ -34,11 +38,13 @@ products.
 
 ## Tier 2 — Compounding content (the best use of "marketing time")
 
-**4. Zenn articles (Japanese).**
-The unfair advantage: less competition than English dev content, existing standing, and
-every article permanently links the products. Write what was actually hard: share
-extensions, EAS gotchas, BYOK architecture, App Store review. One good article
-outperforms a month of forum posting.
+**4. English technical writing (global-first).**
+Publish where distribution is built in and ungated: **dev.to** (no karma system, dev
+audience, strong Google ranking) and/or an owned blog (GitHub Pages — owned asset,
+compounds forever). Write what was actually hard: share extensions, EAS gotchas, BYOK
+architecture, App Store review. Every article permanently links the products. One good
+post outperforms a month of forum posting. (Japanese/Zenn is optional bonus reach, not
+the strategy — the market focus is global.)
 
 **5. Open source / GitHub.**
 Public MIT repos are discoverable forever; a good README ranks in Google and doubles as
@@ -79,7 +85,8 @@ nothing about organic pull.
    it's ~one day of work now.
 2. Launch: PH (+ Show HN if dev-facing) + featuring nomination + cross-promo banners
    flipped on in the existing portfolio.
-3. Within a month: one Zenn article about the hardest technical problem it involved.
+3. Within a month: one English technical article (dev.to / own blog) about the hardest
+   problem it involved.
 4. Then: respond to reviews, harvest feature requests into "you asked, we shipped"
    releases, and get back to shipping.
 

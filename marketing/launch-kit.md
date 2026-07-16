@@ -127,4 +127,4 @@ Don't link-drop — it will be removed. Two safe plays:
 
 - Reply to *every* App Store review that arrives during launch week.
 - Watch ASC Analytics → Sources to see which channel converted; double down there.
-- Post-launch follow-ups: PH badge in README/extension listing, a Zenn (JP) technical article on the BYOK/share-extension architecture, and the Apple featuring nomination if not yet sent.
+- Post-launch follow-ups: PH badge in README/extension listing, an English technical article (dev.to / own blog) on the BYOK/share-extension architecture, and the Apple featuring nomination if not yet sent.
