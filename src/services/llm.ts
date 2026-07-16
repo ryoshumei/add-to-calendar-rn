@@ -12,12 +12,23 @@ import * as FileSystem from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { CONFIG } from '../config';
 
+// RRULE BYDAY two-letter codes, also what the LLM is asked to emit.
+export type RecurrenceDay = 'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU';
+
+export type EventRecurrence = {
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  interval?: number; // every N days/weeks/months/years, default 1
+  until?: string; // YYYY-MM-DD (inclusive last date)
+  daysOfWeek?: RecurrenceDay[]; // weekly only
+};
+
 export type CalendarEvent = {
   title: string;
   description?: string;
   startTime: string; // YYYY-MM-DDTHH:mm:ss
   endTime: string;
   location?: string;
+  recurrence?: EventRecurrence;
 };
 
 export type UsageInfo = {
@@ -44,13 +55,15 @@ function buildSystemPrompt(currentDateTime: string): string {
       "description": "brief description",
       "startTime": "YYYY-MM-DDTHH:mm:ss",
       "endTime": "YYYY-MM-DDTHH:mm:ss",
-      "location": "location if mentioned, include online link if available"
+      "location": "location if mentioned, include online link if available",
+      "recurrence": { "frequency": "daily|weekly|monthly|yearly", "interval": 1, "until": "YYYY-MM-DD", "daysOfWeek": ["MO"] }
     }
   ]
 }
 Current time is: ${currentDateTime}
 For relative dates, use the current time as reference.
 If no specific time mentioned, assume 10:00 AM for 1 hour.
+Include "recurrence" ONLY when the source clearly describes a repeating event ("every Tuesday", "weekly standup", "monthly meetup", "daily at 9"). Omit it entirely for one-off events. In "recurrence": "interval" defaults to 1 (use 2 for "every other week" etc.); include "until" only when an end date is stated; include "daysOfWeek" (two-letter codes MO TU WE TH FR SA SU) only for weekly recurrence. startTime/endTime must be the FIRST occurrence.
 If the source contains multiple events, extract ALL of them as separate objects in the array.
 If only one event is found, still return it inside the events array.
 DO NOT include any markdown formatting, code blocks, or extra text.
@@ -61,12 +74,51 @@ function nowDateTimeString(): string {
   return new Date().toString();
 }
 
+const RECURRENCE_FREQUENCIES = ['daily', 'weekly', 'monthly', 'yearly'] as const;
+const RECURRENCE_DAYS: RecurrenceDay[] = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+
+/**
+ * Validate a model-supplied recurrence object field by field; anything
+ * malformed degrades to "no recurrence" rather than a bad calendar write.
+ */
+function sanitizeRecurrence(raw: unknown): EventRecurrence | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  const frequency = RECURRENCE_FREQUENCIES.find((f) => f === r.frequency);
+  if (!frequency) return undefined;
+
+  const out: EventRecurrence = { frequency };
+  const interval = Number(r.interval);
+  if (Number.isInteger(interval) && interval >= 2 && interval <= 99) {
+    out.interval = interval;
+  }
+  if (typeof r.until === 'string' && !Number.isNaN(new Date(r.until).getTime())) {
+    out.until = r.until;
+  }
+  if (frequency === 'weekly' && Array.isArray(r.daysOfWeek)) {
+    const days = r.daysOfWeek
+      .map((d) => String(d).toUpperCase())
+      .filter((d): d is RecurrenceDay => (RECURRENCE_DAYS as string[]).includes(d));
+    if (days.length) out.daysOfWeek = days;
+  }
+  return out;
+}
+
+/** Normalize events from any source (BYOK or backend): drop invalid recurrence. */
+function sanitizeEvents(events: CalendarEvent[]): CalendarEvent[] {
+  return events.map((e) => {
+    const recurrence = sanitizeRecurrence((e as { recurrence?: unknown }).recurrence);
+    const { recurrence: _raw, ...rest } = e;
+    return recurrence ? { ...rest, recurrence } : rest;
+  });
+}
+
 function parseLLMJson(content: string): CalendarEvent[] {
   const trimmed = content.trim().replace(/^```(?:json)?\s*|\s*```$/g, '');
   const parsed = JSON.parse(trimmed);
-  if (Array.isArray(parsed?.events)) return parsed.events as CalendarEvent[];
+  if (Array.isArray(parsed?.events)) return sanitizeEvents(parsed.events as CalendarEvent[]);
   if (parsed?.title && parsed?.startTime && parsed?.endTime) {
-    return [parsed as CalendarEvent];
+    return sanitizeEvents([parsed as CalendarEvent]);
   }
   throw new Error('LLM response missing events array');
 }
@@ -106,7 +158,7 @@ export async function extractEventsFromTextViaBackend(
     data?.eventDetails?.events ??
     data?.events ??
     (data?.eventDetails ? [data.eventDetails] : []);
-  return { events, usage: data?.usage };
+  return { events: sanitizeEvents(events), usage: data?.usage };
 }
 
 // ─── Backend image extraction (resize → base64 → process-image) ───────────
@@ -164,7 +216,7 @@ export async function extractEventsFromImageViaBackend(
     data?.eventDetails?.events ??
     data?.events ??
     (data?.eventDetails ? [data.eventDetails] : []);
-  return { events, usage: data?.usage };
+  return { events: sanitizeEvents(events), usage: data?.usage };
 }
 
 // ─── BYOK (direct OpenAI) ─────────────────────────────────────────────────

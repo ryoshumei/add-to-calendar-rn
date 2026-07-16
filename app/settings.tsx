@@ -10,7 +10,16 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
-import { clearApiKey, getApiKey, setApiKey } from '../src/services/storage';
+import {
+  clearApiKey,
+  clearPreferredCalendar,
+  getApiKey,
+  getPreferredCalendar,
+  setApiKey,
+  setPreferredCalendar,
+  type PreferredCalendar,
+} from '../src/services/storage';
+import { listWritableCalendars, type WritableCalendar } from '../src/services/calendar';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import Svg, { Path } from 'react-native-svg';
 import {
@@ -246,6 +255,13 @@ export default function Settings() {
         </Text>
       </Footnote>
 
+      <SectionHeader theme={theme}>CALENDAR</SectionHeader>
+      <CalendarTargetGroup theme={theme} />
+      <Footnote theme={theme}>
+        "Add to Calendar" saves events here. "Open in Google" is unaffected — Google
+        picks the calendar on its side.
+      </Footnote>
+
       <SectionHeader theme={theme}>ABOUT</SectionHeader>
       <Group theme={theme}>
         <Row theme={theme}>
@@ -262,6 +278,118 @@ export default function Settings() {
         </Pressable>
       </Group>
     </ScrollView>
+  );
+}
+
+// Picker for the calendar new events are saved to. The device calendar list is
+// only fetched (and permission only requested) when the user taps the row —
+// the collapsed state renders from the stored {id, title} alone.
+function CalendarTargetGroup({ theme }: { theme: Theme }) {
+  const [preferred, setPreferred] = useState<PreferredCalendar | null>(null);
+  const [open, setOpen] = useState(false);
+  const [calendars, setCalendars] = useState<WritableCalendar[] | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    getPreferredCalendar().then(setPreferred);
+  }, []);
+
+  const togglePicker = async () => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const list = await listWritableCalendars();
+      setCalendars(list);
+      setOpen(true);
+    } catch {
+      Alert.alert(
+        'Calendar access needed',
+        'Allow calendar access in iOS Settings to choose where events are saved.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const choose = async (cal: WritableCalendar | null) => {
+    if (cal) {
+      const value = { id: cal.id, title: cal.title };
+      await setPreferredCalendar(value);
+      setPreferred(value);
+    } else {
+      await clearPreferredCalendar();
+      setPreferred(null);
+    }
+    setOpen(false);
+  };
+
+  return (
+    <Group theme={theme}>
+      <Pressable
+        onPress={togglePicker}
+        disabled={loading}
+        style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
+      >
+        <Text style={{ fontSize: 17, color: theme.label, flex: 1 }}>Save events to</Text>
+        <Text style={{ fontSize: 15, color: theme.secondaryLabel }} numberOfLines={1}>
+          {preferred?.title ?? 'System default'}
+        </Text>
+        <Text style={{ color: theme.tertiaryLabel, fontSize: 17, marginLeft: spacing.xs }}>
+          {open ? '⌄' : '›'}
+        </Text>
+      </Pressable>
+      {open && calendars && (
+        <>
+          <Hairline theme={theme} />
+          <Pressable
+            onPress={() => choose(null)}
+            style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
+          >
+            <Text style={{ fontSize: 17, color: theme.label, flex: 1 }}>System default</Text>
+            {!preferred && <Checkmark theme={theme} />}
+          </Pressable>
+          {calendars.map((cal) => (
+            <View key={cal.id}>
+              <Hairline theme={theme} />
+              <Pressable
+                onPress={() => choose(cal)}
+                style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
+              >
+                <View
+                  style={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: 6,
+                    backgroundColor: cal.color || theme.systemBlue,
+                    marginRight: spacing.sm,
+                  }}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 17, color: theme.label }} numberOfLines={1}>
+                    {cal.title}
+                  </Text>
+                  {cal.sourceName ? (
+                    <Text style={{ fontSize: 12, color: theme.tertiaryLabel }} numberOfLines={1}>
+                      {cal.sourceName}
+                    </Text>
+                  ) : null}
+                </View>
+                {preferred?.id === cal.id && <Checkmark theme={theme} />}
+              </Pressable>
+            </View>
+          ))}
+        </>
+      )}
+    </Group>
+  );
+}
+
+function Checkmark({ theme }: { theme: Theme }) {
+  return (
+    <Text style={{ color: theme.systemBlue, fontSize: 17, fontWeight: '600' }}>✓</Text>
   );
 }
 

@@ -460,6 +460,11 @@ function EventCard({
       <Text style={{ fontSize: 13, color: theme.secondaryLabel }}>
         {formatRange(event.startTime, event.endTime)}
       </Text>
+      {event.recurrence ? (
+        <Text style={{ fontSize: 13, color: theme.secondaryLabel }}>
+          ↻ {formatRecurrence(event.recurrence)}
+        </Text>
+      ) : null}
       {event.location ? (
         <Text style={{ fontSize: 13, color: theme.secondaryLabel }}>📍 {event.location}</Text>
       ) : null}
@@ -486,6 +491,41 @@ function EventCard({
       </View>
     </View>
   );
+}
+
+const RECURRENCE_DAY_LABELS: Record<string, string> = {
+  MO: 'Mon',
+  TU: 'Tue',
+  WE: 'Wed',
+  TH: 'Thu',
+  FR: 'Fri',
+  SA: 'Sat',
+  SU: 'Sun',
+};
+
+function formatRecurrence(recurrence: NonNullable<CalendarEvent['recurrence']>): string {
+  const { frequency, interval, until, daysOfWeek } = recurrence;
+  let base: string;
+  if (interval && interval > 1) {
+    const unit = { daily: 'days', weekly: 'weeks', monthly: 'months', yearly: 'years' }[frequency];
+    base = `Every ${interval} ${unit}`;
+  } else {
+    base = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' }[frequency];
+  }
+  if (frequency === 'weekly' && daysOfWeek?.length) {
+    base += ` on ${daysOfWeek.map((d) => RECURRENCE_DAY_LABELS[d] ?? d).join(', ')}`;
+  }
+  if (until) {
+    const end = new Date(`${until}T00:00:00`);
+    if (!Number.isNaN(end.getTime())) {
+      base += ` until ${end.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })}`;
+    }
+  }
+  return base;
 }
 
 function formatRange(startIso: string, endIso: string): string {

@@ -1,7 +1,7 @@
 {
   "configVersion": 0,
   "apple": {
-    "version": "1.0.2",
+    "version": "1.0.3",
     "copyright": "2026 Xiuming Liang",
     "release": {
       "automaticRelease": true
@@ -24,7 +24,7 @@
           "todo",
           "OCR"
         ],
-        "releaseNotes": "• Share a screenshot to Add to Calendar straight from the screenshot editor — this now works reliably\n• Better keyboard handling: Return dismisses the keyboard, and scrolling tucks it away\n• Refined dark-mode look for Settings",
+        "releaseNotes": "You asked, we shipped — both features in this update came from launch-week user requests:\n• Recurring events: “team standup every Tuesday” now becomes a repeating calendar event (weekly, monthly, custom intervals, end dates)\n• Choose your calendar: pick which calendar events are saved to (home/work/school) in Settings",
         "promoText": "Snap a screenshot, paste an email, or type a note — AI turns it into a calendar event in seconds. Sign in free, or bring your own OpenAI key. No ads, no tracking.",
         "supportUrl": "https://github.com/ryoshumei/add-to-calendar-rn",
         "title": "Add to Calendar: AI Events",

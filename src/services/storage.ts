@@ -28,3 +28,33 @@ export async function clearApiKey(): Promise<void> {
   }
   await SecureStore.deleteItemAsync(KEY);
 }
+
+// ─── Preferred target calendar (not a secret — plain AsyncStorage) ─────────
+// Title is stored alongside the id so Settings can show the current choice
+// without triggering a calendar-permission prompt.
+
+const PREFERRED_CALENDAR_KEY = 'preferred_calendar';
+
+export type PreferredCalendar = { id: string; title: string };
+
+export async function getPreferredCalendar(): Promise<PreferredCalendar | null> {
+  try {
+    const raw = await AsyncStorage.getItem(PREFERRED_CALENDAR_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.id === 'string' && typeof parsed?.title === 'string') {
+      return parsed as PreferredCalendar;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setPreferredCalendar(value: PreferredCalendar): Promise<void> {
+  await AsyncStorage.setItem(PREFERRED_CALENDAR_KEY, JSON.stringify(value));
+}
+
+export async function clearPreferredCalendar(): Promise<void> {
+  await AsyncStorage.removeItem(PREFERRED_CALENDAR_KEY);
+}
