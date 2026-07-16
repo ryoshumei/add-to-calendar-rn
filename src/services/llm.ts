@@ -84,7 +84,8 @@ const RECURRENCE_DAYS: RecurrenceDay[] = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'S
 function sanitizeRecurrence(raw: unknown): EventRecurrence | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const r = raw as Record<string, unknown>;
-  const frequency = RECURRENCE_FREQUENCIES.find((f) => f === r.frequency);
+  const freqInput = typeof r.frequency === 'string' ? r.frequency.toLowerCase() : '';
+  const frequency = RECURRENCE_FREQUENCIES.find((f) => f === freqInput);
   if (!frequency) return undefined;
 
   const out: EventRecurrence = { frequency };
@@ -92,7 +93,14 @@ function sanitizeRecurrence(raw: unknown): EventRecurrence | undefined {
   if (Number.isInteger(interval) && interval >= 2 && interval <= 99) {
     out.interval = interval;
   }
-  if (typeof r.until === 'string' && !Number.isNaN(new Date(r.until).getTime())) {
+  // Strict YYYY-MM-DD only: consumers build "<until>T23:59:59" dates and
+  // RRULE UNTIL strings from it, so looser formats new Date() would accept
+  // ("2026/08/01", "August 1, 2026") must be dropped, not passed through.
+  if (
+    typeof r.until === 'string' &&
+    /^\d{4}-\d{2}-\d{2}$/.test(r.until) &&
+    !Number.isNaN(new Date(`${r.until}T00:00:00`).getTime())
+  ) {
     out.until = r.until;
   }
   if (frequency === 'weekly' && Array.isArray(r.daysOfWeek)) {
@@ -106,11 +114,13 @@ function sanitizeRecurrence(raw: unknown): EventRecurrence | undefined {
 
 /** Normalize events from any source (BYOK or backend): drop invalid recurrence. */
 function sanitizeEvents(events: CalendarEvent[]): CalendarEvent[] {
-  return events.map((e) => {
-    const recurrence = sanitizeRecurrence((e as { recurrence?: unknown }).recurrence);
-    const { recurrence: _raw, ...rest } = e;
-    return recurrence ? { ...rest, recurrence } : rest;
-  });
+  return events
+    .filter((e): e is CalendarEvent => !!e && typeof e === 'object')
+    .map((e) => {
+      const recurrence = sanitizeRecurrence((e as { recurrence?: unknown }).recurrence);
+      const { recurrence: _raw, ...rest } = e;
+      return recurrence ? { ...rest, recurrence } : rest;
+    });
 }
 
 function parseLLMJson(content: string): CalendarEvent[] {

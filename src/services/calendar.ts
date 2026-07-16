@@ -141,7 +141,10 @@ function buildRRule(recurrence: EventRecurrence): string {
     parts.push(`BYDAY=${recurrence.daysOfWeek.join(',')}`);
   }
   if (recurrence.until) {
-    parts.push(`UNTIL=${recurrence.until.replace(/-/g, '')}`);
+    // Date-time UNTIL (end of day, UTC) so the last date stays inclusive and
+    // matches the native path's T23:59:59 semantics; a bare date would be
+    // read as the 00:00 boundary and could drop the final occurrence.
+    parts.push(`UNTIL=${recurrence.until.replace(/-/g, '')}T235959Z`);
   }
   return `RRULE:${parts.join(';')}`;
 }
