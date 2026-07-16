@@ -77,15 +77,20 @@ async function getTargetCalendarId(): Promise<string | null> {
   return getDefaultCalendarId();
 }
 
-// RRULE BYDAY code → expo-calendar DayOfTheWeek (1 = Sunday … 7 = Saturday).
+// RRULE BYDAY code → the day number expo-calendar's iOS native side decodes.
+// CAUTION: the TS enum (Calendar.DayOfTheWeek) documents Sunday=1…Saturday=7,
+// but the native record (ios/Records/RecurrenceRuleRecords.swift) decodes
+// monday=1…sunday=7 — using the TS enum shifts every day by one (verified in
+// the simulator: TU stored as WE in EventKit). Pass ISO numbers instead, and
+// re-verify against the DB when upgrading expo-calendar.
 const DAY_CODE_TO_ENUM: Record<RecurrenceDay, Calendar.DayOfTheWeek> = {
-  SU: Calendar.DayOfTheWeek.Sunday,
-  MO: Calendar.DayOfTheWeek.Monday,
-  TU: Calendar.DayOfTheWeek.Tuesday,
-  WE: Calendar.DayOfTheWeek.Wednesday,
-  TH: Calendar.DayOfTheWeek.Thursday,
-  FR: Calendar.DayOfTheWeek.Friday,
-  SA: Calendar.DayOfTheWeek.Saturday,
+  MO: 1 as Calendar.DayOfTheWeek,
+  TU: 2 as Calendar.DayOfTheWeek,
+  WE: 3 as Calendar.DayOfTheWeek,
+  TH: 4 as Calendar.DayOfTheWeek,
+  FR: 5 as Calendar.DayOfTheWeek,
+  SA: 6 as Calendar.DayOfTheWeek,
+  SU: 7 as Calendar.DayOfTheWeek,
 };
 
 const FREQUENCY_TO_ENUM: Record<EventRecurrence['frequency'], Calendar.Frequency> = {
