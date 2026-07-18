@@ -24,6 +24,12 @@ export const CONFIG = {
     NAME: 'Add to Calendar',
     VERSION: '1.0.0',
   },
+  // Static trampoline page (GitHub Pages, sibling extension repo docs/gcal.html)
+  // that forwards recurring-event links to the Google Calendar WEB editor.
+  // Needed because the Google Calendar app intercepts calendar.google.com
+  // URLs as universal links but drops the "recur" parameter. Forks: host
+  // docs/gcal.html yourself and point this at it.
+  GCAL_RECUR_REDIRECT: 'https://ryoshumei.github.io/add-to-calendar/gcal.html',
   // Google OAuth client IDs. Get these from Google Cloud Console.
   // iOS client ID is needed for native Sign-In. Web client ID is required
   // because Supabase verifies the ID token against the web client's audience.
