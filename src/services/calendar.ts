@@ -3,6 +3,7 @@
 
 import * as Calendar from 'expo-calendar';
 import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 import type { CalendarEvent, EventRecurrence, RecurrenceDay } from './llm';
 import { clearPreferredCalendar, getPreferredCalendar } from './storage';
@@ -172,5 +173,14 @@ export function buildGoogleCalendarUrl(event: CalendarEvent): string {
 
 export async function openGoogleCalendar(event: CalendarEvent): Promise<void> {
   const url = buildGoogleCalendarUrl(event);
+  // The Google Calendar mobile app intercepts calendar.google.com links
+  // (universal/app links) but its TEMPLATE handler drops the recur param,
+  // turning recurring events into one-offs (verified on-device, v1.0.3).
+  // An in-app browser doesn't trigger universal links, so recurring events
+  // go to the full web editor — which does honor recur — instead.
+  if (event.recurrence && Platform.OS !== 'web') {
+    await WebBrowser.openBrowserAsync(url);
+    return;
+  }
   await Linking.openURL(url);
 }
