@@ -63,7 +63,7 @@ function buildSystemPrompt(currentDateTime: string): string {
 Current time is: ${currentDateTime}
 For relative dates, use the current time as reference.
 If no specific time mentioned, assume 10:00 AM for 1 hour.
-Include "recurrence" ONLY when the source clearly describes a repeating event ("every Tuesday", "weekly standup", "monthly meetup", "daily at 9"). Omit it entirely for one-off events. In "recurrence": "interval" defaults to 1 (use 2 for "every other week" etc.); include "until" only when an end date is stated; include "daysOfWeek" (two-letter codes MO TU WE TH FR SA SU) only for weekly recurrence. startTime/endTime must be the FIRST occurrence.
+Include "recurrence" ONLY when the source clearly describes a repeating event ("every Tuesday", "weekly standup", "monthly meetup", "daily at 9"). A single dated occurrence ("this Tuesday", "next Friday", "on July 30") is NOT recurring — never infer recurrence from the event type alone. Omit it entirely for one-off events. In "recurrence": "interval" defaults to 1 (use 2 for "every other week" etc.); include "until" only when an end date is stated; include "daysOfWeek" (two-letter codes MO TU WE TH FR SA SU) only for weekly recurrence. startTime/endTime must be the FIRST occurrence.
 If the source contains multiple events, extract ALL of them as separate objects in the array.
 If only one event is found, still return it inside the events array.
 DO NOT include any markdown formatting, code blocks, or extra text.
