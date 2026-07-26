@@ -7,14 +7,7 @@ import { Platform } from 'react-native';
 import { CONFIG } from '../config';
 import type { CalendarEvent, EventRecurrence, RecurrenceDay } from './llm';
 import { clearPreferredCalendar, getPreferredCalendar } from './storage';
-
-function deviceTimeZone(): string | undefined {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
-  } catch {
-    return undefined;
-  }
-}
+import { effectiveTimeZone } from './timezone';
 
 export async function ensureCalendarPermission(): Promise<boolean> {
   const { status } = await Calendar.requestCalendarPermissionsAsync();
@@ -126,7 +119,7 @@ export async function addEventToDeviceCalendar(event: CalendarEvent): Promise<st
   const calendarId = await getTargetCalendarId();
   if (!calendarId) throw new Error('No writable calendar found on this device');
 
-  const timeZone = deviceTimeZone();
+  const timeZone = await effectiveTimeZone();
 
   const id = await Calendar.createEventAsync(calendarId, {
     title: event.title,
@@ -155,7 +148,7 @@ function buildRRule(recurrence: EventRecurrence): string {
   return `RRULE:${parts.join(';')}`;
 }
 
-export function buildGoogleCalendarUrl(event: CalendarEvent): string {
+export function buildGoogleCalendarUrl(event: CalendarEvent, timeZone?: string): string {
   const fmt = (s: string) =>
     new Date(s).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const params = new URLSearchParams({
@@ -166,13 +159,12 @@ export function buildGoogleCalendarUrl(event: CalendarEvent): string {
     location: event.location ?? '',
   });
   if (event.recurrence) params.append('recur', buildRRule(event.recurrence));
-  const tz = deviceTimeZone();
-  if (tz) params.append('ctz', tz);
+  if (timeZone) params.append('ctz', timeZone);
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
 export async function openGoogleCalendar(event: CalendarEvent): Promise<void> {
-  const url = buildGoogleCalendarUrl(event);
+  const url = buildGoogleCalendarUrl(event, await effectiveTimeZone());
   // The Google Calendar mobile app intercepts calendar.google.com links
   // (universal/app links) but its TEMPLATE handler drops the recur param,
   // turning recurring events into one-offs (verified on-device, v1.0.3).

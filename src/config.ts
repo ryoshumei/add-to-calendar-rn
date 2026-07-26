@@ -19,6 +19,8 @@ export const CONFIG = {
       'https://pahcnlwgtghsctbnedhx.supabase.co/functions/v1/delete-account',
     APPLE_LINK:
       'https://pahcnlwgtghsctbnedhx.supabase.co/functions/v1/apple-link',
+    GET_USAGE:
+      'https://pahcnlwgtghsctbnedhx.supabase.co/functions/v1/get-usage',
   },
   APP: {
     NAME: 'Add to Calendar',

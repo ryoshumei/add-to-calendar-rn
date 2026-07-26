@@ -11,6 +11,7 @@
 import * as FileSystem from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { CONFIG } from '../config';
+import { effectiveTimeZone, nowInTimeZone } from './timezone';
 
 // RRULE BYDAY two-letter codes, also what the LLM is asked to emit.
 export type RecurrenceDay = 'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU';
@@ -70,8 +71,10 @@ DO NOT include any markdown formatting, code blocks, or extra text.
 ONLY return the JSON object itself.`;
 }
 
-function nowDateTimeString(): string {
-  return new Date().toString();
+// "Now" in the user's effective time zone (Settings override or device zone),
+// with the zone name spelled out so the LLM anchors relative dates correctly.
+async function nowDateTimeString(): Promise<string> {
+  return nowInTimeZone(await effectiveTimeZone());
 }
 
 const RECURRENCE_FREQUENCIES = ['daily', 'weekly', 'monthly', 'yearly'] as const;
@@ -147,10 +150,10 @@ export async function extractEventsFromTextViaBackend(
       'X-Extension-Version': CONFIG.APP.VERSION,
       apikey: CONFIG.SUPABASE_ANON_KEY,
     },
-    // currentDateTime tells the backend the DEVICE's local time (with
+    // currentDateTime tells the backend the user's local time (with
     // timezone) so relative dates ("tomorrow") resolve against the user's
     // clock, not the Edge Function's UTC clock.
-    body: JSON.stringify({ selectedText: text, currentDateTime: nowDateTimeString() }),
+    body: JSON.stringify({ selectedText: text, currentDateTime: await nowDateTimeString() }),
   });
 
   if (!res.ok) {
@@ -172,6 +175,37 @@ export async function extractEventsFromTextViaBackend(
     data?.events ??
     (data?.eventDetails ? [data.eventDetails] : []);
   return { events: sanitizeEvents(events), usage: data?.usage };
+}
+
+/**
+ * Current-month usage without consuming a request — lets the home screen
+ * show remaining credits on launch. Best-effort: returns null on any
+ * failure so it can never block the UI.
+ */
+export async function fetchUsageViaBackend(accessToken: string): Promise<UsageInfo | null> {
+  try {
+    const res = await fetch(CONFIG.EDGE_FUNCTIONS.GET_USAGE, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'X-Extension-Version': CONFIG.APP.VERSION,
+        apikey: CONFIG.SUPABASE_ANON_KEY,
+      },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const usage = data?.usage;
+    if (
+      usage &&
+      typeof usage.usageCount === 'number' &&
+      typeof usage.limit === 'number' &&
+      typeof usage.yearMonth === 'string'
+    ) {
+      return usage as UsageInfo;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 // ─── Backend image extraction (resize → base64 → process-image) ───────────
@@ -210,8 +244,8 @@ export async function extractEventsFromImageViaBackend(
       apikey: CONFIG.SUPABASE_ANON_KEY,
     },
     // Same as the text path: relative dates in the image resolve against
-    // the device clock, not the server's UTC clock.
-    body: JSON.stringify({ image: dataUrl, currentDateTime: nowDateTimeString() }),
+    // the user's clock, not the server's UTC clock.
+    body: JSON.stringify({ image: dataUrl, currentDateTime: await nowDateTimeString() }),
   });
 
   if (!res.ok) {
@@ -241,7 +275,7 @@ export async function extractEventsFromText(
   text: string,
 ): Promise<CalendarEvent[]> {
   if (!apiKey) throw new Error('OpenAI API key is required');
-  const currentDateTime = nowDateTimeString();
+  const currentDateTime = await nowDateTimeString();
   const body = {
     model: MODEL_TEXT,
     temperature: 0.3,
@@ -275,7 +309,7 @@ export async function extractEventsFromImage(
   });
   const mime = guessMime(imageUri);
   const dataUrl = `data:${mime};base64,${base64}`;
-  const currentDateTime = nowDateTimeString();
+  const currentDateTime = await nowDateTimeString();
 
   const body = {
     model: MODEL_VISION,

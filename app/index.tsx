@@ -21,6 +21,7 @@ import {
   extractEventsFromImageViaBackend,
   extractEventsFromText,
   extractEventsFromTextViaBackend,
+  fetchUsageViaBackend,
   type CalendarEvent,
   type UsageInfo,
 } from '../src/services/llm';
@@ -57,6 +58,24 @@ export default function Home() {
       refreshKey();
     }, [refreshKey]),
   );
+
+  // Show remaining credits as soon as the user opens the app — extraction
+  // responses keep the count fresh afterwards. Best-effort: a failed fetch
+  // just leaves the banner without the counter.
+  const accessToken = auth.session?.access_token ?? null;
+  useEffect(() => {
+    if (!accessToken) {
+      setUsage(null);
+      return;
+    }
+    let cancelled = false;
+    fetchUsageViaBackend(accessToken).then((u) => {
+      if (!cancelled && u) setUsage(u);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
 
   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentContext();
   useEffect(() => {

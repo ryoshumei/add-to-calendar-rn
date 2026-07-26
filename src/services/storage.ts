@@ -58,3 +58,24 @@ export async function setPreferredCalendar(value: PreferredCalendar): Promise<vo
 export async function clearPreferredCalendar(): Promise<void> {
   await AsyncStorage.removeItem(PREFERRED_CALENDAR_KEY);
 }
+
+// ─── Preferred time zone (not a secret — plain AsyncStorage) ───────────────
+// Unset = follow the device time zone.
+
+const PREFERRED_TIMEZONE_KEY = 'preferred_timezone';
+
+export async function getPreferredTimeZone(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(PREFERRED_TIMEZONE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export async function setPreferredTimeZone(tz: string): Promise<void> {
+  await AsyncStorage.setItem(PREFERRED_TIMEZONE_KEY, tz);
+}
+
+export async function clearPreferredTimeZone(): Promise<void> {
+  await AsyncStorage.removeItem(PREFERRED_TIMEZONE_KEY);
+}

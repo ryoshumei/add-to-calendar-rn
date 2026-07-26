@@ -13,13 +13,17 @@ import {
 import {
   clearApiKey,
   clearPreferredCalendar,
+  clearPreferredTimeZone,
   getApiKey,
   getPreferredCalendar,
+  getPreferredTimeZone,
   setApiKey,
   setPreferredCalendar,
+  setPreferredTimeZone,
   type PreferredCalendar,
 } from '../src/services/storage';
 import { listWritableCalendars, type WritableCalendar } from '../src/services/calendar';
+import { deviceTimeZone, listTimeZones } from '../src/services/timezone';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import Svg, { Path } from 'react-native-svg';
 import {
@@ -262,6 +266,13 @@ export default function Settings() {
         picks the calendar on its side.
       </Footnote>
 
+      <SectionHeader theme={theme}>TIME ZONE</SectionHeader>
+      <TimeZoneGroup theme={theme} />
+      <Footnote theme={theme}>
+        Dates like "tomorrow" and event times are interpreted in this time zone.
+        Follows the device unless you choose one.
+      </Footnote>
+
       <SectionHeader theme={theme}>ABOUT</SectionHeader>
       <Group theme={theme}>
         <Row theme={theme}>
@@ -390,6 +401,111 @@ function CalendarTargetGroup({ theme }: { theme: Theme }) {
 function Checkmark({ theme }: { theme: Theme }) {
   return (
     <Text style={{ color: theme.systemBlue, fontSize: 17, fontWeight: '600' }}>✓</Text>
+  );
+}
+
+// Picker for the time zone used to interpret relative dates and event times.
+// Collapsed row renders from stored preference alone; the (possibly long)
+// IANA list only mounts when expanded, with a search filter.
+function TimeZoneGroup({ theme }: { theme: Theme }) {
+  const [preferred, setPreferred] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const device = deviceTimeZone();
+
+  useEffect(() => {
+    getPreferredTimeZone().then(setPreferred);
+  }, []);
+
+  const choose = async (tz: string | null) => {
+    if (tz) {
+      await setPreferredTimeZone(tz);
+      setPreferred(tz);
+    } else {
+      await clearPreferredTimeZone();
+      setPreferred(null);
+    }
+    setOpen(false);
+    setQuery('');
+  };
+
+  const zones = open
+    ? listTimeZones().filter((z) => z.toLowerCase().includes(query.trim().toLowerCase()))
+    : [];
+  const shown = zones.slice(0, 50);
+
+  return (
+    <Group theme={theme}>
+      <Pressable
+        onPress={() => setOpen(!open)}
+        style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
+      >
+        <Text style={{ fontSize: 17, color: theme.label, flex: 1 }}>Time zone</Text>
+        <Text style={{ fontSize: 15, color: theme.secondaryLabel }} numberOfLines={1}>
+          {preferred ?? `${device} (device)`}
+        </Text>
+        <Text style={{ color: theme.tertiaryLabel, fontSize: 17, marginLeft: spacing.xs }}>
+          {open ? '⌄' : '›'}
+        </Text>
+      </Pressable>
+      {open && (
+        <>
+          <Hairline theme={theme} />
+          <View style={{ padding: spacing.md }}>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  color: theme.label,
+                  backgroundColor: theme.groupedBackground,
+                  borderColor: theme.separator,
+                },
+              ]}
+              placeholder="Search time zones…"
+              placeholderTextColor={theme.tertiaryLabel}
+              value={query}
+              onChangeText={setQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+          <Hairline theme={theme} />
+          <Pressable
+            onPress={() => choose(null)}
+            style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
+          >
+            <Text style={{ fontSize: 17, color: theme.label, flex: 1 }}>
+              Device time zone ({device})
+            </Text>
+            {!preferred && <Checkmark theme={theme} />}
+          </Pressable>
+          {shown.map((tz) => (
+            <View key={tz}>
+              <Hairline theme={theme} />
+              <Pressable
+                onPress={() => choose(tz)}
+                style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.fill }]}
+              >
+                <Text style={{ fontSize: 16, color: theme.label, flex: 1 }} numberOfLines={1}>
+                  {tz.replace(/_/g, ' ')}
+                </Text>
+                {preferred === tz && <Checkmark theme={theme} />}
+              </Pressable>
+            </View>
+          ))}
+          {zones.length > shown.length && (
+            <>
+              <Hairline theme={theme} />
+              <View style={styles.row}>
+                <Text style={{ fontSize: 13, color: theme.tertiaryLabel, flex: 1 }}>
+                  {zones.length - shown.length} more — keep typing to narrow down
+                </Text>
+              </View>
+            </>
+          )}
+        </>
+      )}
+    </Group>
   );
 }
 
