@@ -24,7 +24,7 @@
           "todo",
           "OCR"
         ],
-        "releaseNotes": "Bug fix: relative dates like “tomorrow” now resolve in your device’s time zone. Previously, extractions late at night could land one day early in time zones ahead of UTC.",
+        "releaseNotes": "• Fixed: relative dates like “tomorrow” now resolve in your time zone — late-night extractions could land a day early in time zones ahead of UTC\n• New: choose the time zone used for event extraction (Settings › Time Zone)\n• New: remaining free requests show as soon as you open the app",
         "promoText": "Snap a screenshot, paste an email, or type a note — AI turns it into a calendar event in seconds. Sign in free, or bring your own OpenAI key. No ads, no tracking.",
         "supportUrl": "https://github.com/ryoshumei/add-to-calendar-rn",
         "title": "Add to Calendar: AI Events",
