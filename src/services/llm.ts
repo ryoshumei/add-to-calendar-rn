@@ -147,7 +147,10 @@ export async function extractEventsFromTextViaBackend(
       'X-Extension-Version': CONFIG.APP.VERSION,
       apikey: CONFIG.SUPABASE_ANON_KEY,
     },
-    body: JSON.stringify({ selectedText: text }),
+    // currentDateTime tells the backend the DEVICE's local time (with
+    // timezone) so relative dates ("tomorrow") resolve against the user's
+    // clock, not the Edge Function's UTC clock.
+    body: JSON.stringify({ selectedText: text, currentDateTime: nowDateTimeString() }),
   });
 
   if (!res.ok) {
@@ -206,7 +209,9 @@ export async function extractEventsFromImageViaBackend(
       'X-Extension-Version': CONFIG.APP.VERSION,
       apikey: CONFIG.SUPABASE_ANON_KEY,
     },
-    body: JSON.stringify({ image: dataUrl }),
+    // Same as the text path: relative dates in the image resolve against
+    // the device clock, not the server's UTC clock.
+    body: JSON.stringify({ image: dataUrl, currentDateTime: nowDateTimeString() }),
   });
 
   if (!res.ok) {
