@@ -64,6 +64,7 @@ function buildSystemPrompt(currentDateTime: string): string {
 Current time is: ${currentDateTime}
 For relative dates, use the current time as reference.
 If no specific time mentioned, assume 10:00 AM for 1 hour.
+endTime must be strictly AFTER startTime — when an event crosses midnight (e.g. starts 23:12), endTime uses the NEXT day's date.
 Include "recurrence" ONLY when the source clearly describes a repeating event ("every Tuesday", "weekly standup", "monthly meetup", "daily at 9"). A single dated occurrence ("this Tuesday", "next Friday", "on July 30") is NOT recurring — never infer recurrence from the event type alone. Omit it entirely for one-off events. In "recurrence": "interval" defaults to 1 (use 2 for "every other week" etc.); include "until" only when an end date is stated; include "daysOfWeek" (two-letter codes MO TU WE TH FR SA SU) only for weekly recurrence. startTime/endTime must be the FIRST occurrence.
 If the source contains multiple events, extract ALL of them as separate objects in the array.
 If only one event is found, still return it inside the events array.
@@ -115,14 +116,39 @@ function sanitizeRecurrence(raw: unknown): EventRecurrence | undefined {
   return out;
 }
 
-/** Normalize events from any source (BYOK or backend): drop invalid recurrence. */
+const LOCAL_DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * Repair model output where endTime is not after startTime — the common
+ * cause is an event crossing midnight (a 23:12 receipt + default 1h
+ * duration → 00:12 emitted on the SAME date). Roll endTime forward a day;
+ * anything still nonsensical becomes a 1-hour event. Wall-clock math is
+ * anchored in UTC ("Z") so device timezone/DST can never skew it.
+ * Mirrors the backend's parse-event-response.ts.
+ */
+function normalizeEventTimes(e: CalendarEvent): CalendarEvent {
+  if (!LOCAL_DATETIME_RE.test(e.startTime) || !LOCAL_DATETIME_RE.test(e.endTime)) return e;
+  const start = new Date(`${e.startTime}Z`).getTime();
+  const end = new Date(`${e.endTime}Z`).getTime();
+  if (end > start) return e;
+  // Midnight crossing needs a strictly earlier end — an EQUAL end is a
+  // zero-length event, which becomes 1 hour, not 24.
+  const endNextDay = end + DAY_MS;
+  const repaired = end < start && endNextDay > start ? endNextDay : start + HOUR_MS;
+  return { ...e, endTime: new Date(repaired).toISOString().slice(0, 19) };
+}
+
+/** Normalize events from any source (BYOK or backend): drop invalid
+ * recurrence, repair inverted start/end times. */
 function sanitizeEvents(events: CalendarEvent[]): CalendarEvent[] {
   return events
     .filter((e): e is CalendarEvent => !!e && typeof e === 'object')
     .map((e) => {
       const recurrence = sanitizeRecurrence((e as { recurrence?: unknown }).recurrence);
       const { recurrence: _raw, ...rest } = e;
-      return recurrence ? { ...rest, recurrence } : rest;
+      return normalizeEventTimes(recurrence ? { ...rest, recurrence } : rest);
     });
 }
 
