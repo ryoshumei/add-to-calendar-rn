@@ -1,6 +1,6 @@
 {
   "name": "add-to-calendar-rn",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "license": "MIT",
   "main": "expo-router/entry",
   "scripts": {

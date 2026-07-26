@@ -22,7 +22,7 @@ export const CONFIG = {
   },
   APP: {
     NAME: 'Add to Calendar',
-    VERSION: '1.0.0',
+    VERSION: '1.0.4',
   },
   // Static trampoline page (GitHub Pages, sibling extension repo docs/gcal.html)
   // that forwards recurring-event links to the Google Calendar WEB editor.
