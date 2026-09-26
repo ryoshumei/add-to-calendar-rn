@@ -23,7 +23,7 @@ import {
   type PreferredCalendar,
 } from '../src/services/storage';
 import { listWritableCalendars, type WritableCalendar } from '../src/services/calendar';
-import { deviceTimeZone, listTimeZones } from '../src/services/timezone';
+import { deviceTimeZone, searchTimeZones } from '../src/services/timezone';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import Svg, { Path } from 'react-native-svg';
 import {
@@ -429,9 +429,7 @@ function TimeZoneGroup({ theme }: { theme: Theme }) {
     setQuery('');
   };
 
-  const zones = open
-    ? listTimeZones().filter((z) => z.toLowerCase().includes(query.trim().toLowerCase()))
-    : [];
+  const zones = open ? searchTimeZones(query) : [];
   const shown = zones.slice(0, 50);
 
   return (

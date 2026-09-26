@@ -1,4 +1,4 @@
-// Regression tests for time zones in calendar writes.
+// Regression tests for time zones: calendar writes and the Settings zone search.
 //
 // The LLM returns offset-less wall-clock times ("2026-09-27T19:00:00") in the
 // *effective* zone — the Settings override, else the device zone — because
@@ -78,7 +78,9 @@ function loadTs(file) {
 
 const calendar = loadTs(path.join(ROOT, 'src/services/calendar.ts'));
 const storage = loadTs(path.join(ROOT, 'src/services/storage.ts'));
-const { zonedTimeToDate } = loadTs(path.join(ROOT, 'src/services/timezone.ts'));
+const { listTimeZones, searchTimeZones, zonedTimeToDate } = loadTs(
+  path.join(ROOT, 'src/services/timezone.ts'),
+);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -311,6 +313,35 @@ describe('zonedTimeToDate', () => {
       assert.equal(zonedTimeToDate(wall, 'America/New_York').getTime(), new Date(wall).getTime());
     } finally {
       Intl.DateTimeFormat = RealDateTimeFormat;
+    }
+  });
+});
+
+// ─── searchTimeZones ──────────────────────────────────────────────────────
+
+describe('searchTimeZones', () => {
+  it('matches zone names as displayed, with spaces or underscores', () => {
+    for (const [query, zone] of [
+      ['new york', 'America/New_York'],
+      ['New_York', 'America/New_York'],
+      ['  los   angeles ', 'America/Los_Angeles'],
+      ['america/new york', 'America/New_York'],
+      ['tokyo', 'Asia/Tokyo'],
+    ]) {
+      assert.ok(searchTimeZones(query).includes(zone), `"${query}" should find ${zone}`);
+    }
+    assert.deepEqual(searchTimeZones('atlantis'), []);
+    assert.deepEqual(searchTimeZones(' '), listTimeZones());
+  });
+
+  it('searches the curated list used when Intl.supportedValuesOf is missing (Hermes)', () => {
+    const { supportedValuesOf } = Intl;
+    try {
+      Intl.supportedValuesOf = undefined;
+      assert.deepEqual(searchTimeZones('new york'), ['America/New_York']);
+      assert.deepEqual(searchTimeZones('buenos aires'), ['America/Argentina/Buenos_Aires']);
+    } finally {
+      Intl.supportedValuesOf = supportedValuesOf;
     }
   });
 });

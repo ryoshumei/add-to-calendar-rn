@@ -121,6 +121,16 @@ export function listTimeZones(): string[] {
   return COMMON_TIME_ZONES;
 }
 
+/**
+ * Zones matching a Settings search. Rows display "America/New York", so
+ * spaces and underscores are interchangeable ("new york" finds New_York).
+ */
+export function searchTimeZones(query: string): string[] {
+  const key = (s: string) => s.replace(/[_\s]+/g, ' ').trim().toLowerCase();
+  const needle = key(query);
+  return listTimeZones().filter((tz) => key(tz).includes(needle));
+}
+
 const COMMON_TIME_ZONES = [
   'Pacific/Honolulu',
   'America/Anchorage',
