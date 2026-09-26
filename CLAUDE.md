@@ -10,10 +10,11 @@ npm run ios           # build + run on iOS Simulator (Xcode required)
 npm run android       # build + run on Android emulator/device
 npm start             # Expo dev server for Expo Go (quick smoke test)
 npm run prebuild      # regenerate native ios/ and android/ folders
-npx tsc --noEmit      # type-check (no `lint` or `test` scripts exist)
+npm test              # regression tests (Node's built-in runner, no simulator needed)
+npx tsc --noEmit      # type-check (no `lint` script exists)
 ```
 
-The first `npm run ios` runs `expo prebuild` to regenerate `ios/`. Re-run prebuild after editing `app.json` permissions/plugins. There is no test or lint suite — `npx tsc --noEmit` is the only static check.
+The first `npm run ios` runs `expo prebuild` to regenerate `ios/`. Re-run prebuild after editing `app.json` permissions/plugins. There is no lint suite. `npm test` runs `test/*.test.js` with `node --test`: the tests load the real `src/services/*.ts` (transpiled with the repo's TypeScript, native modules stubbed at the top of the test file), so a service that gains a new native import needs a stub there.
 
 ## Required environment
 
