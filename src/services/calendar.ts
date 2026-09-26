@@ -7,7 +7,7 @@ import { Platform } from 'react-native';
 import { CONFIG } from '../config';
 import type { CalendarEvent, EventRecurrence, RecurrenceDay } from './llm';
 import { clearPreferredCalendar, getPreferredCalendar } from './storage';
-import { effectiveTimeZone } from './timezone';
+import { deviceTimeZone, effectiveTimeZone, zonedTimeToDate } from './timezone';
 
 export async function ensureCalendarPermission(): Promise<boolean> {
   const { status } = await Calendar.requestCalendarPermissionsAsync();
@@ -94,14 +94,14 @@ const FREQUENCY_TO_ENUM: Record<EventRecurrence['frequency'], Calendar.Frequency
   yearly: Calendar.Frequency.YEARLY,
 };
 
-function toRecurrenceRule(recurrence: EventRecurrence): Calendar.RecurrenceRule {
+function toRecurrenceRule(recurrence: EventRecurrence, timeZone: string): Calendar.RecurrenceRule {
   const rule: Calendar.RecurrenceRule = {
     frequency: FREQUENCY_TO_ENUM[recurrence.frequency],
   };
   if (recurrence.interval) rule.interval = recurrence.interval;
   if (recurrence.until) {
     // End of the "until" day, so the last occurrence is included.
-    rule.endDate = new Date(`${recurrence.until}T23:59:59`);
+    rule.endDate = zonedTimeToDate(`${recurrence.until}T23:59:59`, timeZone);
   }
   // daysOfTheWeek is iOS-only in expo-calendar; on Android weekly recurrence
   // still anchors to the start date's weekday, which covers the common case.
@@ -121,44 +121,58 @@ export async function addEventToDeviceCalendar(event: CalendarEvent): Promise<st
 
   const timeZone = await effectiveTimeZone();
 
+  // Event times are wall-clock in the effective zone (the LLM was given "now"
+  // there), so resolve them in that zone — EventKit's timeZone field only
+  // labels the event, it doesn't reinterpret the instant.
   const id = await Calendar.createEventAsync(calendarId, {
     title: event.title,
     notes: event.description,
     location: event.location,
-    startDate: new Date(event.startTime),
-    endDate: new Date(event.endTime),
+    startDate: zonedTimeToDate(event.startTime, timeZone),
+    endDate: zonedTimeToDate(event.endTime, timeZone),
     timeZone,
-    ...(event.recurrence ? { recurrenceRule: toRecurrenceRule(event.recurrence) } : {}),
+    ...(event.recurrence
+      ? { recurrenceRule: toRecurrenceRule(event.recurrence, timeZone) }
+      : {}),
   });
   return id;
 }
 
-function buildRRule(recurrence: EventRecurrence): string {
+// Wall-clock time in `timeZone` → Google's UTC stamp (20260927T230000Z).
+function toGoogleUtc(localDateTime: string, timeZone: string): string {
+  return zonedTimeToDate(localDateTime, timeZone)
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}/, '');
+}
+
+function buildRRule(recurrence: EventRecurrence, timeZone: string): string {
   const parts = [`FREQ=${recurrence.frequency.toUpperCase()}`];
   if (recurrence.interval) parts.push(`INTERVAL=${recurrence.interval}`);
   if (recurrence.frequency === 'weekly' && recurrence.daysOfWeek?.length) {
     parts.push(`BYDAY=${recurrence.daysOfWeek.join(',')}`);
   }
   if (recurrence.until) {
-    // Date-time UNTIL (end of day, UTC) so the last date stays inclusive and
-    // matches the native path's T23:59:59 semantics; a bare date would be
-    // read as the 00:00 boundary and could drop the final occurrence.
-    parts.push(`UNTIL=${recurrence.until.replace(/-/g, '')}T235959Z`);
+    // Date-time UNTIL at the end of the "until" day in the event's zone (as
+    // UTC) so the last date stays inclusive and matches the native path; a
+    // bare date would be read as the 00:00 boundary and could drop the final
+    // occurrence, and a UTC end of day is hours off for most users.
+    parts.push(`UNTIL=${toGoogleUtc(`${recurrence.until}T23:59:59`, timeZone)}`);
   }
   return `RRULE:${parts.join(';')}`;
 }
 
 export function buildGoogleCalendarUrl(event: CalendarEvent, timeZone?: string): string {
-  const fmt = (s: string) =>
-    new Date(s).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  // ctz only sets the editor's display zone; the Z stamps fix the instant.
+  const tz = timeZone ?? deviceTimeZone();
   const params = new URLSearchParams({
     action: 'TEMPLATE',
     text: event.title ?? '',
-    dates: `${fmt(event.startTime)}/${fmt(event.endTime)}`,
+    dates: `${toGoogleUtc(event.startTime, tz)}/${toGoogleUtc(event.endTime, tz)}`,
     details: event.description ?? '',
     location: event.location ?? '',
   });
-  if (event.recurrence) params.append('recur', buildRRule(event.recurrence));
+  if (event.recurrence) params.append('recur', buildRRule(event.recurrence, tz));
   if (timeZone) params.append('ctz', timeZone);
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
